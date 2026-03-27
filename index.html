@@ -312,20 +312,24 @@ async function saveToSheet(dept){
 
   setSyncStatus('syncing','Saving…');
   try{
-    // Use mode:'no-cors' + Content-Type:'text/plain' to avoid CORS preflight.
-    // Apps Script handles this via e.postData.contents in doPost.
-    // The response will be opaque (unreadable) but the write succeeds server-side.
-    await fetch(SHEET_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action:'write', dept, data: deptData[dept] })
+    // URLSearchParams avoids CORS preflight and Apps Script reads via e.parameter
+    const params = new URLSearchParams({
+      action: 'write',
+      dept:   dept,
+      data:   JSON.stringify(deptData[dept])
     });
-    // no-cors response is always opaque — if no exception, assume success
-    setSyncStatus('ok',`Saved ${new Date().toLocaleTimeString()}`);
+
+    await fetch(SHEET_URL, {
+      method:  'POST',
+      mode:    'no-cors',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body:    params.toString()
+    });
+
+    setSyncStatus('ok', `Saved ${new Date().toLocaleTimeString()}`);
   } catch(err){
     console.error('Sheet save error:', err.message);
-    setSyncStatus('error','Save error — data stored locally');
+    setSyncStatus('error', 'Save error — data stored locally');
   }
 }
 
