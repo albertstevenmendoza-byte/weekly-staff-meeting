@@ -28,7 +28,7 @@ html,body{height:100%;overflow:hidden;}
 body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.022'/%3E%3C/svg%3E");}
 
 /* NAV */
-.top-nav{height:var(--nav-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;z-index:100;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.04);}
+.top-nav{height:var(--nav-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;z-index:10;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.04);position:relative;}
 .logo{display:flex;align-items:center;gap:10px;}
 .logo-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--blue),var(--blue-l));border-radius:8px;display:flex;align-items:center;justify-content:center;}
 .logo-icon svg{width:16px;height:16px;fill:white;}
@@ -46,8 +46,21 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .sync-status{font-size:.7rem;font-family:'DM Mono',monospace;color:var(--ink3);display:flex;align-items:center;gap:5px;}
 
 /* STAGE */
-.stage{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:16px 0 64px;perspective:1200px;}
-.coverflow{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;transform-style:preserve-3d;}
+.stage{flex:1;display:flex;align-items:center;justify-content:center;overflow:visible;padding:16px 0 64px;perspective:1200px;position:relative;z-index:20;}
+.coverflow{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;transform-style:preserve-3d;overflow:visible;}
+
+/* DIM OVERLAY — appears behind flipped card */
+#flip-dim{
+  display:none;
+  position:fixed;inset:0;
+  background:rgba(15,23,42,.45);
+  backdrop-filter:blur(2px);
+  z-index:98;
+  opacity:0;
+  transition:opacity .4s var(--ease);
+}
+#flip-dim.active{display:block;}
+#flip-dim.visible{opacity:1;}
 
 /* ARROWS */
 .nav-arrow{position:absolute;z-index:50;width:48px;height:48px;border-radius:50%;background:var(--surface);border:1px solid var(--border2);color:var(--ink3);font-size:1.3rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s var(--spring);box-shadow:0 2px 12px rgba(0,0,0,.1);top:50%;transform:translateY(-50%);}
@@ -57,9 +70,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .nav-arrow:disabled{opacity:.2;cursor:default;box-shadow:none;}
 
 /* CARD SLOT */
-.card-slot{position:absolute;width:var(--card-w);height:var(--card-h);transform-style:preserve-3d;transition:transform .5s cubic-bezier(.4,0,.2,1),opacity .5s,filter .5s;cursor:pointer;will-change:transform,opacity;transform-origin:center center;}
-.card-slot.is-active{cursor:default;z-index:10;}
-.card-slot.is-active.is-flipped{transform:scale(1.18)!important;z-index:20;}
+.card-slot{position:absolute;width:var(--card-w);height:var(--card-h);transform-style:preserve-3d;transition:transform .55s cubic-bezier(.4,0,.2,1),opacity .5s,filter .5s,box-shadow .5s;cursor:pointer;will-change:transform,opacity;transform-origin:center center;}
+.card-slot.is-active{cursor:default;z-index:99;}
+.card-slot.is-active.is-flipped{z-index:99;}
 .card-slot.is-prev,.card-slot.is-next{z-index:5;}
 .card-slot.is-far{z-index:1;}
 .card-slot.is-hidden{z-index:0;pointer-events:none;}
@@ -173,6 +186,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
     <button class="btn" onclick="openEditModal()">✎ Edit</button>
   </div>
 </nav>
+
+<div id="flip-dim" onclick="toggleFlip()"></div>
 
 <div class="stage">
   <div class="coverflow" id="coverflow">
@@ -553,15 +568,38 @@ function toggleFlip(){
   if(!fc)return;
   flipped=!fc.classList.contains('flipped');
   fc.classList.toggle('flipped',flipped);
+
   const slot=slots[currentIdx];
-  if(slot){
-    slot.classList.toggle('is-flipped',flipped);
-    const tr='transform .5s cubic-bezier(.4,0,.2,1),opacity .45s,filter .45s';
-    if(flipped){
-      slot.style.cssText=`transition:${tr};transform:scale(1.18);opacity:1;filter:none;z-index:20;pointer-events:auto;`;
-    } else {
-      slot.style.cssText=`transition:${tr};transform:translateX(0px) scale(1) rotateY(0deg);opacity:1;filter:none;z-index:10;pointer-events:auto;`;
-    }
+  const dim=document.getElementById('flip-dim');
+  const tr='transform .55s cubic-bezier(.4,0,.2,1),opacity .45s,filter .45s,box-shadow .55s';
+
+  if(flipped){
+    slot.classList.add('is-flipped');
+    // Fly card up and toward viewer — negative translateY moves it toward nav bar
+    // translateZ pushes it forward out of the 3D plane
+    slot.style.cssText=`
+      transition:${tr};
+      transform:translateY(-6%) scale(1.2) translateZ(120px);
+      opacity:1;filter:none;
+      z-index:99;pointer-events:auto;
+      box-shadow:0 40px 100px rgba(0,0,0,.35),0 20px 40px rgba(0,0,0,.2);
+    `;
+    // Show dim overlay with a slight delay so card starts moving first
+    dim.classList.add('active');
+    requestAnimationFrame(()=>requestAnimationFrame(()=>dim.classList.add('visible')));
+  } else {
+    slot.classList.remove('is-flipped');
+    // Return card to resting position
+    slot.style.cssText=`
+      transition:${tr};
+      transform:translateX(0px) scale(1) rotateY(0deg);
+      opacity:1;filter:none;
+      z-index:99;pointer-events:auto;
+      box-shadow:'';
+    `;
+    // Fade out and hide overlay
+    dim.classList.remove('visible');
+    setTimeout(()=>dim.classList.remove('active'),400);
   }
 }
 
@@ -573,6 +611,10 @@ function navigate(dir){
   if(fc)fc.classList.remove('flipped');
   const prevSlot=slots[currentIdx];
   if(prevSlot)prevSlot.classList.remove('is-flipped');
+  // Clear dim overlay
+  const dim=document.getElementById('flip-dim');
+  dim.classList.remove('visible');
+  setTimeout(()=>dim.classList.remove('active'),400);
   flipped=false;
   currentIdx=next;
   positionSlots(true);
@@ -584,7 +626,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='ArrowRight'||e.key==='ArrowDown')navigate(1);
   if(e.key==='ArrowLeft'||e.key==='ArrowUp')navigate(-1);
   if((e.key==='f'||e.key==='F'||e.key===' ')&&!e.ctrlKey&&!e.metaKey){e.preventDefault();toggleFlip();}
-  if(e.key==='Escape')closeModal();
+  if(e.key==='Escape'){if(flipped)toggleFlip();else closeModal();}
 });
 
 // ── MODAL ─────────────────────────────────────────────────────────────────
