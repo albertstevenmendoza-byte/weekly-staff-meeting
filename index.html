@@ -263,11 +263,11 @@ function setSyncStatus(state,msg){
   lbl.textContent=msg;
 }
 
-// Returns true only if a real URL has been configured
+// Returns true if a real URL has been configured
 function hasSheetURL(){
-  return SHEET_URL &&
-         SHEET_URL !== 'https://script.google.com/macros/s/AKfycbxOjN2iXOMU3_UoROBpcivFWomRa1dM3aKk7g-T21757Ujp7K7i7jZBDo8KTZqH9A0tNg/exec' &&
-         SHEET_URL.startsWith('https://script.google.com/');
+  return typeof SHEET_URL === 'string' &&
+         SHEET_URL.trim().length > 0 &&
+         SHEET_URL !== 'https://script.google.com/macros/s/AKfycbxOjN2iXOMU3_UoROBpcivFWomRa1dM3aKk7g-T21757Ujp7K7i7jZBDo8KTZqH9A0tNg/exec';
 }
 
 // ── GOOGLE SHEETS SYNC ────────────────────────────────────────────────────
