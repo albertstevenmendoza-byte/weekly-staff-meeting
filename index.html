@@ -27,7 +27,7 @@
 html,body{height:100%;overflow:hidden;}
 body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.022'/%3E%3C/svg%3E");}
 
-/* ── NAV ── */
+/* NAV */
 .top-nav{height:var(--nav-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;z-index:100;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.04);}
 .logo{display:flex;align-items:center;gap:10px;}
 .logo-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--blue),var(--blue-l));border-radius:8px;display:flex;align-items:center;justify-content:center;}
@@ -37,101 +37,48 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .nav-right{display:flex;gap:8px;align-items:center;}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:.8rem;font-weight:600;font-family:inherit;cursor:pointer;border:1px solid var(--border2);background:transparent;color:var(--ink2);transition:all .13s var(--ease);}
 .btn:hover{background:var(--bg);border-color:var(--blue-l);color:var(--blue);}
-.btn.sync{background:rgba(5,150,105,.1);border-color:rgba(5,150,105,.3);color:var(--green);}
-.btn.sync:hover{background:rgba(5,150,105,.18);}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;}
+.btn.primary:hover{filter:brightness(1.08);}
 .sync-dot{width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;margin-right:2px;}
 .sync-dot.syncing{background:var(--yellow);animation:pulse-dot 1s ease-in-out infinite;}
 .sync-dot.error{background:var(--red);}
 @keyframes pulse-dot{0%,100%{opacity:1;}50%{opacity:.3;}}
 .sync-status{font-size:.7rem;font-family:'DM Mono',monospace;color:var(--ink3);display:flex;align-items:center;gap:5px;}
 
-/* ── STAGE ── */
-.stage{
-  flex:1;display:flex;align-items:center;justify-content:center;
-  overflow:hidden;padding:16px 0 64px;
-  perspective:1200px;
-}
+/* STAGE */
+.stage{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:16px 0 64px;perspective:1200px;}
+.coverflow{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;transform-style:preserve-3d;}
 
-/* ── COVERFLOW TRACK ── */
-.coverflow{
-  position:relative;
-  width:100%;height:100%;
-  display:flex;align-items:center;justify-content:center;
-  transform-style:preserve-3d;
-}
-
-/* ── ARROWS ── */
-.nav-arrow{
-  position:absolute;z-index:50;
-  width:48px;height:48px;border-radius:50%;
-  background:var(--surface);border:1px solid var(--border2);
-  color:var(--ink3);font-size:1.3rem;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  transition:all .18s var(--spring);
-  box-shadow:0 2px 12px rgba(0,0,0,.1);
-  top:50%;transform:translateY(-50%);
-}
+/* ARROWS */
+.nav-arrow{position:absolute;z-index:50;width:48px;height:48px;border-radius:50%;background:var(--surface);border:1px solid var(--border2);color:var(--ink3);font-size:1.3rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s var(--spring);box-shadow:0 2px 12px rgba(0,0,0,.1);top:50%;transform:translateY(-50%);}
 .nav-arrow.prev{left:clamp(8px,3vw,40px);}
 .nav-arrow.next{right:clamp(8px,3vw,40px);}
-.nav-arrow:hover:not(:disabled){background:var(--blue-ll);border-color:var(--blue-l);color:var(--blue);box-shadow:0 4px 16px rgba(37,99,235,.2);}
+.nav-arrow:hover:not(:disabled){background:var(--blue-ll);border-color:var(--blue-l);color:var(--blue);}
 .nav-arrow:disabled{opacity:.2;cursor:default;box-shadow:none;}
 
-/* ── CARD SLOT (positioned absolutely, all dept cards live here) ── */
-.card-slot{
-  position:absolute;
-  width:var(--card-w);
-  height:var(--card-h);
-  transform-style:preserve-3d;
-  transition:transform .5s cubic-bezier(.4,0,.2,1), opacity .5s cubic-bezier(.4,0,.2,1), filter .5s;
-  cursor:pointer;
-  will-change:transform,opacity;
-  transform-origin:center center;
-}
+/* CARD SLOT */
+.card-slot{position:absolute;width:var(--card-w);height:var(--card-h);transform-style:preserve-3d;transition:transform .5s cubic-bezier(.4,0,.2,1),opacity .5s,filter .5s;cursor:pointer;will-change:transform,opacity;transform-origin:center center;}
 .card-slot.is-active{cursor:default;z-index:10;}
-.card-slot.is-active.is-flipped{
-  transform:scale(1.18) !important;
-  z-index:20;
-}
+.card-slot.is-active.is-flipped{transform:scale(1.18)!important;z-index:20;}
 .card-slot.is-prev,.card-slot.is-next{z-index:5;}
 .card-slot.is-far{z-index:1;}
 .card-slot.is-hidden{z-index:0;pointer-events:none;}
 
-/* ── FLIP CARD ── */
-.flip-card{
-  position:relative;width:100%;height:100%;
-  transform-style:preserve-3d;
-  transition:transform .6s cubic-bezier(.4,0,.2,1);
-}
+/* FLIP */
+.flip-card{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .6s cubic-bezier(.4,0,.2,1);}
 .flip-card.flipped{transform:rotateY(180deg);}
-.flip-face{
-  position:absolute;inset:0;
-  border-radius:var(--radius);
-  backface-visibility:hidden;-webkit-backface-visibility:hidden;
-  overflow:hidden;
-}
+.flip-face{position:absolute;inset:0;border-radius:var(--radius);backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;}
 .face-back{transform:rotateY(180deg);}
 
-/* ── SHARED CARD SHELL ── */
-.face-front,.face-back{
-  background:var(--surface);
-  border:1px solid var(--border);
-  display:flex;flex-direction:column;
-  /* 3-D looking shadow */
-  box-shadow:
-    0 2px 0 rgba(0,0,0,.04),
-    0 4px 0 1px rgba(0,0,0,.03),
-    0 8px 0 2px rgba(0,0,0,.025),
-    0 16px 32px rgba(0,0,0,.12),
-    0 32px 64px rgba(0,0,0,.08),
-    inset 0 1px 0 rgba(255,255,255,.9);
-}
+/* CARD SHELL */
+.face-front,.face-back{background:var(--surface);border:1px solid var(--border);display:flex;flex-direction:column;box-shadow:0 2px 0 rgba(0,0,0,.04),0 4px 0 1px rgba(0,0,0,.03),0 8px 0 2px rgba(0,0,0,.025),0 16px 32px rgba(0,0,0,.12),0 32px 64px rgba(0,0,0,.08),inset 0 1px 0 rgba(255,255,255,.9);}
 
-/* ── CARD HEADER ── */
+/* CARD HEADER */
 .card-head{background:linear-gradient(135deg,var(--blue),var(--blue-l));padding:26px 32px 20px;flex-shrink:0;display:flex;align-items:flex-end;justify-content:space-between;}
 .dept-eyebrow{font-size:.75rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.65);font-family:'DM Mono',monospace;margin-bottom:5px;}
 .dept-name{font-size:2.6rem;font-weight:700;color:#fff;letter-spacing:-.03em;line-height:1.1;}
 
-/* ── FRONT BODY ── */
+/* FRONT BODY */
 .front-body{flex:1;display:grid;grid-template-columns:1fr 1fr;overflow:hidden;}
 .focus-half{display:flex;flex-direction:column;overflow:hidden;background:var(--surface);}
 .focus-half:first-child{border-right:1px solid var(--border);}
@@ -141,20 +88,20 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .items-list::-webkit-scrollbar{width:4px;}
 .items-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 
-/* ── COLOR-CODED ITEM ROW ── */
+/* COLOR-CODED ITEM ROW */
 .item-row{padding:11px 14px 11px 16px;border-radius:8px;border-left:4px solid var(--border2);background:var(--bg2);font-size:.92rem;color:var(--ink2);line-height:1.45;}
 .item-row.ic-green{border-left-color:var(--green-l);background:rgba(16,185,129,.06);color:var(--ink);}
 .item-row.ic-yellow{border-left-color:var(--yellow-l);background:rgba(245,158,11,.06);color:var(--ink);}
 .item-row.ic-red{border-left-color:var(--red-l);background:rgba(239,68,68,.06);color:var(--ink);}
 .empty-hint{font-size:.85rem;color:var(--ink4);font-style:italic;padding:16px 12px;}
 
-/* ── FRONT FOOTER ── */
+/* FRONT FOOTER */
 .front-footer{padding:12px 24px;flex-shrink:0;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg2);}
 .flip-hint{font-size:.72rem;color:var(--ink4);font-family:'DM Mono',monospace;display:flex;align-items:center;gap:6px;user-select:none;}
 .flip-key{width:20px;height:20px;border:1px solid var(--border2);border-radius:4px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:.68rem;color:var(--ink3);}
 .card-counter{font-size:.72rem;font-family:'DM Mono',monospace;color:var(--ink4);}
 
-/* ── BACK BODY ── */
+/* BACK TILES */
 .back-tiles{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;background:var(--border);overflow:hidden;}
 .back-tile{background:var(--surface);display:flex;flex-direction:column;overflow:hidden;}
 .tile-hd{padding:10px 16px 8px;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--blue-ll);display:flex;align-items:center;justify-content:space-between;}
@@ -162,7 +109,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .tile-type-tag{font-size:.62rem;font-weight:700;text-transform:uppercase;color:var(--blue);background:rgba(37,99,235,.1);padding:3px 8px;border-radius:3px;}
 .tile-bd{flex:1;overflow:hidden;display:flex;flex-direction:column;}
 .tile-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--ink4);font-size:.88rem;font-style:italic;padding:12px;text-align:center;}
-/* upload area */
 .upload-area{border:2px dashed var(--border2);border-radius:8px;padding:14px 10px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;margin-top:5px;}
 .upload-area:hover{border-color:var(--blue-l);background:var(--blue-ll);}
 .upload-area input[type=file]{display:none;}
@@ -179,13 +125,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .tile-chart{flex:1;padding:8px;position:relative;}
 .tile-chart canvas{position:absolute;inset:8px;}
 
-/* ── DOTS ── */
+/* DOTS */
 .dots-nav{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center;z-index:50;}
 .dept-dot{width:7px;height:7px;border-radius:50%;background:var(--border2);cursor:pointer;transition:all .2s var(--spring);}
 .dept-dot.has-data{background:var(--ink4);}
 .dept-dot.active{width:20px;border-radius:4px;background:var(--blue);}
 
-/* ── MODAL ── */
+/* MODAL */
 #modal-overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(15,23,42,.4);backdrop-filter:blur(4px);align-items:center;justify-content:center;}
 #modal-overlay.open{display:flex;}
 #modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:min(660px,95vw);max-height:88vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.18);}
@@ -194,22 +140,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .modal-x{background:rgba(255,255,255,.2);border:none;color:#fff;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;}
 .modal-x:hover{background:rgba(255,255,255,.35);}
 .modal-body{padding:20px;display:flex;flex-direction:column;gap:18px;}
-
-/* status row */
-.status-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.form-group{display:flex;flex-direction:column;gap:5px;}
-.form-group.full{grid-column:1/-1;}
-.form-label{font-size:.65rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);}
 .form-input,.form-select{background:var(--bg2);border:1px solid var(--border);border-radius:7px;color:var(--ink);font-family:inherit;font-size:.84rem;padding:7px 10px;outline:none;transition:border-color .15s,box-shadow .15s;width:100%;}
 .form-input:focus,.form-select:focus{border-color:var(--blue-l);box-shadow:0 0 0 3px var(--blue-glow);}
 .form-textarea{background:var(--bg2);border:1px solid var(--border);border-radius:7px;color:var(--ink);font-family:inherit;font-size:.84rem;padding:7px 10px;outline:none;resize:vertical;min-height:60px;line-height:1.5;width:100%;transition:border-color .15s,box-shadow .15s;}
 .form-textarea:focus{border-color:var(--blue-l);box-shadow:0 0 0 3px var(--blue-glow);}
-
-/* section divider */
 .modal-section{border-top:1px solid var(--border);padding-top:16px;display:flex;flex-direction:column;gap:10px;}
 .modal-section-title{font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);font-family:'DM Mono',monospace;}
-
-/* item editor */
 .item-editor-list{display:flex;flex-direction:column;gap:6px;}
 .item-editor-row{display:flex;align-items:center;gap:7px;}
 .item-editor-row .form-input{flex:1;font-size:.82rem;padding:6px 9px;}
@@ -218,49 +154,35 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .item-remove-btn:hover{background:var(--red-ll);border-color:var(--red-l);color:var(--red);}
 .add-item-btn{font-size:.78rem;color:var(--blue);background:var(--blue-ll);border:1px dashed var(--blue-l);border-radius:7px;padding:6px 12px;cursor:pointer;font-family:inherit;font-weight:600;width:100%;transition:filter .12s;}
 .add-item-btn:hover{filter:brightness(.95);}
-
-/* tile form grid */
 .tile-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .tile-form-box{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:7px;}
 .tile-form-label{font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);font-family:'DM Mono',monospace;}
-
 .modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--surface);border-radius:0 0 var(--radius) var(--radius);}
-
-/* ── ANIMS ── */
-@keyframes cardInR{from{opacity:0;transform:scale(.93) translateX(28px);}to{opacity:1;transform:none;}}
-@keyframes cardInL{from{opacity:0;transform:scale(.93) translateX(-28px);}to{opacity:1;transform:none;}}
-.anim-r{animation:cardInR .32s var(--ease) both;}
-.anim-l{animation:cardInL .32s var(--ease) both;}
 </style>
 </head>
 <body>
 
-<!-- NAV -->
 <nav class="top-nav">
   <div class="logo">
     <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zm0 11h7v7H3zm11-11h7v7h-7zm0 11h7v7h-7z"/></svg></div>
     <span class="logo-text">Novus <span>Foods</span> Ops — Staff Meeting</span>
   </div>
   <div class="nav-right">
-    <div class="sync-status"><span class="sync-dot" id="sync-dot"></span><span id="sync-label">Not synced</span></div>
-    <button class="btn" onclick="loadFromSheet()" title="Pull latest data from Google Sheets">⟳ Refresh</button>
+    <div class="sync-status"><span class="sync-dot" id="sync-dot"></span><span id="sync-label">Loading…</span></div>
+    <button class="btn" onclick="loadFromSheet()">⟳ Refresh</button>
     <button class="btn" onclick="openEditModal()">✎ Edit</button>
   </div>
 </nav>
 
-<!-- STAGE -->
 <div class="stage">
   <div class="coverflow" id="coverflow">
     <button class="nav-arrow prev" id="btn-prev" onclick="navigate(-1)" disabled>‹</button>
     <button class="nav-arrow next" id="btn-next" onclick="navigate(1)">›</button>
-    <!-- card slots injected by JS -->
   </div>
 </div>
 
-<!-- DOTS -->
 <div class="dots-nav" id="dots-nav"></div>
 
-<!-- MODAL -->
 <div id="modal-overlay">
   <div id="modal">
     <div class="modal-head">
@@ -268,32 +190,20 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
       <button class="modal-x" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
-
-      <!-- Overall status + headings -->
-      <div class="status-row">
-
-      </div>
-
-      <!-- Last week items -->
-      <div class="modal-section">
+      <div class="modal-section" style="border-top:none;padding-top:0;">
         <div class="modal-section-title">Last Week — Items</div>
         <div class="item-editor-list" id="lw-editor"></div>
         <button class="add-item-btn" onclick="addItemRow('lw')">+ Add item</button>
       </div>
-
-      <!-- This week items -->
       <div class="modal-section">
         <div class="modal-section-title">This Week — Items</div>
         <div class="item-editor-list" id="tw-editor"></div>
         <button class="add-item-btn" onclick="addItemRow('tw')">+ Add item</button>
       </div>
-
-      <!-- Back tiles -->
       <div class="modal-section">
         <div class="modal-section-title">Back — Up to 4 Data Tiles</div>
         <div class="tile-form-grid" id="tile-forms"></div>
       </div>
-
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Cancel</button>
@@ -302,71 +212,46 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
   </div>
 </div>
 
-
-
 <script>
-// ─────────────────────────────────────────────────────────────────────────
-// !! REPLACE THIS WITH YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL !!
-const SHEET_URL = 'https://script.google.com/macros/s/AKfycbxOjN2iXOMU3_UoROBpcivFWomRa1dM3aKk7g-T21757Ujp7K7i7jZBDo8KTZqH9A0tNg/exec';
-// ─────────────────────────────────────────────────────────────────────────
+// ── CONFIG ────────────────────────────────────────────────────────────────
+// Replace the string below with your deployed Google Apps Script Web App URL.
+// Deploy with: Execute as = Me, Who has access = Anyone (or Anyone in org).
+const SHEET_URL = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE';
 
 const DEPARTMENTS = [
   'SAP','Production','Finance','QA','Shipping','Receiving',
   'Sanitation','Engineering','Maintenance','Training',
   'HR','Continuous Improvement','Inventory Control'
 ];
-const STATUS_CFG = {
-  none:  {label:'—',        badgeCls:'hb-none',   stripe:''},
-  green: {label:'On Track', badgeCls:'hb-green',  stripe:'green'},
-  yellow:{label:'Delayed',  badgeCls:'hb-yellow', stripe:'yellow'},
-  red:   {label:'At Risk',  badgeCls:'hb-red',    stripe:'red'},
-};
 const TILE_ALPHA = ['A','B','C','D'];
 const KEY = 'novus_staffmtg_v4';
 let deptData = {}, currentIdx = 0, flipped = false, chartRefs = {};
 
-// ── SEED ─────────────────────────────────────────────────────────────────
-function seed() {
-  deptData['Inventory Control'] = {
-    lwStatus:'green', lwTitle:'Q1 Cycle Count — A Zone',
-    lwItems:[
-      {text:'A-zone count complete',color:'green'},
-      {text:'5 SAP discrepancies resolved',color:'yellow'},
-      {text:'Mirror labels applied on uprights',color:'green'},
-    ],
-    twStatus:'yellow', twTitle:'B / C Zone Cycle Count',
-    twItems:[
-      {text:'B-zone count — 3 staff assigned',color:'none'},
-      {text:'SAP batch due Thursday',color:'yellow'},
-      {text:'Engineering access window TBD',color:'red'},
-    ],
+// ── SEED DATA ─────────────────────────────────────────────────────────────
+function seed(){
+  deptData['Inventory Control']={
+    lwItems:[{text:'A-zone count complete',color:'green'},{text:'5 SAP discrepancies resolved',color:'yellow'},{text:'Mirror labels applied on uprights',color:'green'}],
+    twItems:[{text:'B-zone count — 3 staff assigned',color:'none'},{text:'SAP batch due Thursday',color:'yellow'},{text:'Engineering access window TBD',color:'red'}],
     tiles:[
       {type:'chart',title:'Inventory Accuracy',chartType:'line',chartLabel:'Accuracy %',chartLabels:'Wk1,Wk2,Wk3,Wk4,Wk5,Wk6',chartData:'97.2,98.1,96.8,99.0,98.5,97.9'},
-      {type:'notes',title:'Escalations',notes:'• B-rack access blocked Tue–Wed\n• 2 staff on PTO Thursday\n• SAP batch needs Finance sign-off\n\nAction: confirm access with Engineering by EOD Monday.'},
+      {type:'notes',title:'Escalations',notes:'• B-rack access blocked Tue-Wed\n• 2 staff on PTO Thursday\n• SAP batch needs Finance sign-off\n\nAction: confirm access with Engineering by EOD Monday.'},
       {type:'none'},{type:'none'}
     ]
   };
-  deptData['QA'] = {
-    lwStatus:'green', lwTitle:'Allergen Audit & pH Compliance',
+  deptData['QA']={
     lwItems:[{text:'Zero allergen findings',color:'green'},{text:'pH 100% on salsa lines',color:'green'},{text:'All swab results pass',color:'green'}],
-    twStatus:'green', twTitle:'Supplier Documentation Review',
     twItems:[{text:'COAs for tomato lot #4412',color:'none'},{text:'3 supplier files up for renewal',color:'yellow'}],
-    tiles:[
-      {type:'chart',title:'Pass Rate %',chartType:'bar',chartLabel:'Pass Rate',chartLabels:'Wk1,Wk2,Wk3,Wk4,Wk5,Wk6',chartData:'99,100,98,100,100,99'},
-      {type:'none'},{type:'none'},{type:'none'}
-    ]
+    tiles:[{type:'chart',title:'Pass Rate %',chartType:'bar',chartLabel:'Pass Rate',chartLabels:'Wk1,Wk2,Wk3,Wk4,Wk5,Wk6',chartData:'99,100,98,100,100,99'},{type:'none'},{type:'none'},{type:'none'}]
   };
-  deptData['Sanitation'] = {
-    lwStatus:'yellow', lwTitle:'Deep Clean — Lines 2A & PL1',
+  deptData['Sanitation']={
     lwItems:[{text:'2A deep clean complete',color:'green'},{text:'PL1 pushed to Monday',color:'red'},{text:'ATP results pending 2 zones',color:'yellow'}],
-    twStatus:'green', twTitle:'PL1 Deep Clean & ATP Verification',
     twItems:[{text:'PL1 deep clean 3rd shift Monday',color:'none'},{text:'ATP results by Tuesday EOD',color:'none'}],
     tiles:[{type:'none'},{type:'none'},{type:'none'},{type:'none'}]
   };
   saveLocal();
 }
 
-// ── PERSIST (localStorage cache) ──────────────────────────────────────────
+// ── LOCAL CACHE ───────────────────────────────────────────────────────────
 function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(deptData));}catch(e){}}
 function loadLocal(){try{const r=localStorage.getItem(KEY);if(r){deptData=JSON.parse(r);return true;}}catch(e){}return false;}
 
@@ -378,85 +263,94 @@ function setSyncStatus(state,msg){
   lbl.textContent=msg;
 }
 
+// Returns true only if a real URL has been configured
+function hasSheetURL(){
+  return SHEET_URL &&
+         SHEET_URL !== 'https://script.google.com/macros/s/AKfycbxOjN2iXOMU3_UoROBpcivFWomRa1dM3aKk7g-T21757Ujp7K7i7jZBDo8KTZqH9A0tNg/exec' &&
+         SHEET_URL.startsWith('https://script.google.com/');
+}
+
 // ── GOOGLE SHEETS SYNC ────────────────────────────────────────────────────
-// The Apps Script web app receives GET ?action=read and POST with JSON body.
-// Each department maps to its own sheet tab named exactly as in DEPARTMENTS[].
-// Row format per tab: Column A = field name, Column B = JSON value.
+// Apps Script Web App: doGet(?action=read) returns all dept data as JSON.
+// doPost receives {action:'write', dept, data} as text/plain body (no CORS preflight).
+//
+// Apps Script doPost must read: JSON.parse(e.postData.contents)
+// Deploy: Execute as = Me, Who has access = Anyone (or Anyone in your org)
 
 async function loadFromSheet(){
-  if(SHEET_URL==='https://script.google.com/macros/s/AKfycbxOjN2iXOMU3_UoROBpcivFWomRa1dM3aKk7g-T21757Ujp7K7i7jZBDo8KTZqH9A0tNg/exec'){
-    setSyncStatus('error','No URL set');
-    // Fall through to local cache
-    if(!loadLocal())seed();
+  if(!hasSheetURL()){
+    setSyncStatus('error','No Sheet URL — using local cache');
+    if(!loadLocal()) seed();
     return;
   }
   setSyncStatus('syncing','Loading…');
   try{
-    const res=await fetch(`${SHEET_URL}?action=read`,{method:'GET'});
-    const json=await res.json();
-    if(json.ok&&json.data){
-      deptData=json.data;
+    const res = await fetch(`${SHEET_URL}?action=read`);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if(json.ok && json.data){
+      deptData = json.data;
       saveLocal();
       setSyncStatus('ok',`Updated ${new Date().toLocaleTimeString()}`);
     } else {
-      throw new Error(json.error||'Bad response');
+      throw new Error(json.error || 'Unexpected response');
     }
-  }catch(err){
-    setSyncStatus('error','Sheet error — using cache');
-    if(!loadLocal())seed();
+  } catch(err){
+    console.warn('Sheet load failed:', err.message);
+    setSyncStatus('error','Sheet unavailable — using local cache');
+    if(!loadLocal()) seed();
   }
 }
 
 async function saveToSheet(dept){
-  if(SHEET_URL==='YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE'){
-    setSyncStatus('error','No URL — saved locally only');
-    saveLocal();return;
+  saveLocal(); // always persist locally first
+
+  if(!hasSheetURL()){
+    setSyncStatus('error','No Sheet URL — saved locally only');
+    return;
   }
+
   setSyncStatus('syncing','Saving…');
-  saveLocal();
   try{
-    const body={action:'write',dept,data:deptData[dept]};
-    const res=await fetch(SHEET_URL,{
-      method:'POST',
-      // Apps Script requires no-cors or a CORS-enabled deployment
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(body)
+    // Use mode:'no-cors' + Content-Type:'text/plain' to avoid CORS preflight.
+    // Apps Script handles this via e.postData.contents in doPost.
+    // The response will be opaque (unreadable) but the write succeeds server-side.
+    await fetch(SHEET_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action:'write', dept, data: deptData[dept] })
     });
-    const json=await res.json();
-    if(json.ok){
-      setSyncStatus('ok',`Saved ${new Date().toLocaleTimeString()}`);
-    } else {
-      throw new Error(json.error||'Write failed');
-    }
-  }catch(err){
-    setSyncStatus('error','Save failed — cached locally');
+    // no-cors response is always opaque — if no exception, assume success
+    setSyncStatus('ok',`Saved ${new Date().toLocaleTimeString()}`);
+  } catch(err){
+    console.error('Sheet save error:', err.message);
+    setSyncStatus('error','Save error — data stored locally');
   }
 }
 
-// ── INIT ─────────────────────────────────────────────────────────────────
+// ── INIT ──────────────────────────────────────────────────────────────────
 let weekLabel='', eyebrow='';
 async function init(){
   const now=new Date();
-  const ws=new Date(now);ws.setDate(now.getDate()-now.getDay()+1);
-  const we=new Date(ws);we.setDate(ws.getDate()+4);
+  const ws=new Date(now); ws.setDate(now.getDate()-now.getDay()+1);
+  const we=new Date(ws); we.setDate(ws.getDate()+4);
   const f=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-  weekLabel=`Week of ${f(ws)} – ${f(we)}`;
+  weekLabel=`Week of ${f(ws)} - ${f(we)}`;
   eyebrow=now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-  // Load from local cache immediately so UI isn't blank, then sync from sheet
-  if(!loadLocal())seed();
+  if(!loadLocal()) seed();
   buildCoverflow();
   refreshAllSlots();
   positionSlots(false);
   buildDots();
-  // Then attempt live fetch in background
   await loadFromSheet();
   refreshAllSlots();
   buildDots();
 }
 
-// ── DOTS ─────────────────────────────────────────────────────────────────
+// ── DOTS ──────────────────────────────────────────────────────────────────
 function buildDots(){
-  const w=document.getElementById('dots-nav');w.innerHTML='';
+  const w=document.getElementById('dots-nav'); w.innerHTML='';
   DEPARTMENTS.forEach((dept,i)=>{
     const d=document.createElement('div');
     d.className='dept-dot'+(deptData[dept]?' has-data':'')+(i===currentIdx?' active':'');
@@ -512,7 +406,7 @@ function makeCardHTML(dept,i){
         </div>
       </div>
       <div class="front-footer">
-        <div class="flip-hint"><div class="flip-key">↩</div> Click card to see data panels</div>
+        <div class="flip-hint"><div class="flip-key">&#8629;</div> Click card to see data panels</div>
         <div class="card-counter">${i+1} / ${DEPARTMENTS.length}</div>
       </div>
     </div>
@@ -523,7 +417,7 @@ function makeCardHTML(dept,i){
           <div class="dept-name">${esc(dept)}</div>
         </div>
         <div class="flip-hint" style="color:rgba(255,255,255,.65);align-self:flex-start;margin-top:4px;">
-          <div class="flip-key" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff;">↩</div>
+          <div class="flip-key" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff;">&#8629;</div>
           Flip back
         </div>
       </div>
@@ -542,39 +436,38 @@ function positionSlots(animate){
   const cw=CARD_W_PX();
   slots.forEach((slot,i)=>{
     const diff=i-currentIdx;
+    const isFlippedSlot=slot.classList.contains('is-flipped');
     let tx=0,scale=1,ry=0,opacity=1,filter='none',zIndex=1,pe='none';
     if(diff===0){
-      tx=0;scale=1;ry=0;opacity=1;zIndex=10;pe='auto';
-      slot.className='card-slot is-active';
+      tx=0;scale=1;ry=0;opacity=1;zIndex=isFlippedSlot?20:10;pe='auto';
     } else if(diff===-1){
       tx=-cw*0.62;scale=0.82;ry=38;opacity=0.72;filter='blur(4px)';zIndex=5;pe='auto';
-      slot.className='card-slot is-prev';
     } else if(diff===1){
       tx=cw*0.62;scale=0.82;ry=-38;opacity=0.72;filter='blur(4px)';zIndex=5;pe='auto';
-      slot.className='card-slot is-next';
     } else if(diff===-2){
       tx=-cw*1.08;scale=0.66;ry=52;opacity=0.3;filter='blur(8px)';zIndex=2;
-      slot.className='card-slot is-far';
     } else if(diff===2){
       tx=cw*1.08;scale=0.66;ry=-52;opacity=0.3;filter='blur(8px)';zIndex=2;
-      slot.className='card-slot is-far';
     } else {
       tx=diff<0?-cw*1.6:cw*1.6;scale=0.5;opacity=0;zIndex=0;
-      slot.className='card-slot is-hidden';
     }
     const tr=animate?'transform .5s cubic-bezier(.4,0,.2,1),opacity .45s,filter .45s':'none';
-    slot.style.cssText=`transition:${tr};transform:translateX(${tx}px) scale(${scale}) rotateY(${ry}deg);opacity:${opacity};filter:${filter};z-index:${zIndex};pointer-events:${pe};`;
+    if(isFlippedSlot && diff===0){
+      slot.style.cssText=`transition:${tr};transform:scale(1.18);opacity:1;filter:none;z-index:20;pointer-events:auto;`;
+    } else {
+      slot.style.cssText=`transition:${tr};transform:translateX(${tx}px) scale(${scale}) rotateY(${ry}deg);opacity:${opacity};filter:${filter};z-index:${zIndex};pointer-events:${pe};`;
+    }
   });
 }
 
 window.addEventListener('resize',()=>positionSlots(false));
 
-// ── RENDER DATA INTO SLOTS ────────────────────────────────────────────────
-function renderItems(containerId, items){
+// ── RENDER DATA ────────────────────────────────────────────────────────────
+function renderItems(containerId,items){
   const el=document.getElementById(containerId);
   if(!el)return;
   el.innerHTML='';
-  if(!items.length){el.innerHTML='<div class="empty-hint">No items added.</div>';return;}
+  if(!items||!items.length){el.innerHTML='<div class="empty-hint">No items added.</div>';return;}
   items.forEach(item=>{
     const row=document.createElement('div');
     row.className=`item-row ic-${item.color||'none'}`;
@@ -594,7 +487,7 @@ function refreshSlotData(i){
 
 function refreshAllSlots(){DEPARTMENTS.forEach((_,i)=>refreshSlotData(i));}
 
-// ── BACK TILES ────────────────────────────────────────────────────────────
+// ── BACK TILES ─────────────────────────────────────────────────────────────
 function renderTilesForSlot(si,tiles){
   const wrap=document.getElementById(`back-tiles-${si}`);
   if(!wrap)return;
@@ -615,14 +508,14 @@ function renderTilesForSlot(si,tiles){
     const bd=document.getElementById(`tbd-${uid}`);
     if(t.type==='notes'&&t.notes){
       bd.innerHTML=`<div class="tile-notes">${esc(t.notes)}</div>`;
-    }else if(t.type==='chart'){
+    } else if(t.type==='chart'){
       bd.innerHTML=`<div class="tile-chart"><canvas id="tc-${uid}"></canvas></div>`;
       setTimeout(()=>drawChart(uid,t),80);
-    }else if(t.type==='image'&&t.imageUrl){
+    } else if(t.type==='image'&&t.imageUrl){
       bd.innerHTML=`<div class="tile-img"><img src="${esc(t.imageUrl)}" onerror="this.parentElement.innerHTML='<div class=tile-empty>Image failed to load</div>'"></div>`;
-    }else if(t.type==='video'&&t.videoUrl){
+    } else if(t.type==='video'&&t.videoUrl){
       bd.innerHTML=`<div class="tile-video"><iframe src="${ytEmbed(t.videoUrl)}" allowfullscreen></iframe></div>`;
-    }else{
+    } else {
       bd.innerHTML=`<div class="tile-empty">Empty — click Edit to configure</div>`;
     }
   }
@@ -631,7 +524,7 @@ function renderTilesForSlot(si,tiles){
 function drawChart(uid,t){
   const canvas=document.getElementById(`tc-${uid}`);
   if(!canvas||typeof Chart==='undefined')return;
-  const ex=Chart.getChart(canvas);if(ex)ex.destroy();
+  const ex=Chart.getChart(canvas); if(ex)ex.destroy();
   const labels=(t.chartLabels||'').split(',').map(s=>s.trim());
   const vals=(t.chartData||'').split(',').map(s=>parseFloat(s.trim())).filter(v=>!isNaN(v));
   const type=t.chartType||'line';
@@ -650,36 +543,32 @@ function destroyChartsForSlot(si){
   Object.keys(chartRefs).filter(k=>k.startsWith(`${si}-`)).forEach(k=>{try{chartRefs[k].destroy();}catch(e){}delete chartRefs[k];});
 }
 
-// ── FLIP ─────────────────────────────────────────────────────────────────
+// ── FLIP ──────────────────────────────────────────────────────────────────
 function toggleFlip(){
   const fc=document.getElementById(`flipcard-${currentIdx}`);
   if(!fc)return;
   flipped=!fc.classList.contains('flipped');
   fc.classList.toggle('flipped',flipped);
-  // zoom the slot when showing back, reset when showing front
   const slot=slots[currentIdx];
   if(slot){
     slot.classList.toggle('is-flipped',flipped);
-    // override the inline transform set by positionSlots
+    const tr='transform .5s cubic-bezier(.4,0,.2,1),opacity .45s,filter .45s';
     if(flipped){
-      slot.style.transform='scale(1.18)';
+      slot.style.cssText=`transition:${tr};transform:scale(1.18);opacity:1;filter:none;z-index:20;pointer-events:auto;`;
     } else {
-      slot.style.transform='translateX(0px) scale(1) rotateY(0deg)';
+      slot.style.cssText=`transition:${tr};transform:translateX(0px) scale(1) rotateY(0deg);opacity:1;filter:none;z-index:10;pointer-events:auto;`;
     }
   }
 }
 
-// ── NAVIGATE ─────────────────────────────────────────────────────────────
+// ── NAVIGATE ──────────────────────────────────────────────────────────────
 function navigate(dir){
   const next=currentIdx+dir;
   if(next<0||next>=DEPARTMENTS.length)return;
   const fc=document.getElementById(`flipcard-${currentIdx}`);
   if(fc)fc.classList.remove('flipped');
-  // reset zoom on current slot
   const prevSlot=slots[currentIdx];
-  if(prevSlot){
-    prevSlot.classList.remove('is-flipped');
-  }
+  if(prevSlot)prevSlot.classList.remove('is-flipped');
   flipped=false;
   currentIdx=next;
   positionSlots(true);
@@ -694,10 +583,11 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape')closeModal();
 });
 
+// ── MODAL ─────────────────────────────────────────────────────────────────
 function openEditModal(){
   const dept=DEPARTMENTS[currentIdx];
   const d=deptData[dept]||{};
-  document.getElementById('modal-title').textContent=`Edit — ${dept}`;
+  document.getElementById('modal-title').textContent=`Edit - ${dept}`;
   buildItemEditor('lw',d.lwItems||[]);
   buildItemEditor('tw',d.twItems||[]);
   buildTileForms(d.tiles||[]);
@@ -707,7 +597,7 @@ function openEditModal(){
 function buildItemEditor(side,items){
   const wrap=document.getElementById(`${side}-editor`);
   wrap.innerHTML='';
-  const list=items.length?items:[{text:'',color:'none'}];
+  const list=items&&items.length?items:[{text:'',color:'none'}];
   list.forEach(item=>appendItemRow(side,item.text||'',item.color||'none'));
 }
 
@@ -718,15 +608,14 @@ function appendItemRow(side,text,color){
   const row=document.createElement('div');
   row.className='item-editor-row';
   row.innerHTML=`
-    <input class="form-input" placeholder="Short item description…" value="${esc(text)}">
+    <input class="form-input" placeholder="Short item description..." value="${esc(text)}">
     <select class="form-select item-color-select">
-      <option value="none" ${color==='none'?'selected':''}>⬜ None</option>
-      <option value="green" ${color==='green'?'selected':''}>🟢 Green</option>
-      <option value="yellow" ${color==='yellow'?'selected':''}>🟡 Yellow</option>
-      <option value="red" ${color==='red'?'selected':''}>🔴 Red</option>
+      <option value="none" ${color==='none'?'selected':''}>None</option>
+      <option value="green" ${color==='green'?'selected':''}>Green</option>
+      <option value="yellow" ${color==='yellow'?'selected':''}>Yellow</option>
+      <option value="red" ${color==='red'?'selected':''}>Red</option>
     </select>
-    <button class="item-remove-btn" onclick="this.closest('.item-editor-row').remove()" title="Remove">✕</button>
-  `;
+    <button class="item-remove-btn" onclick="this.closest('.item-editor-row').remove()">x</button>`;
   wrap.appendChild(row);
 }
 
@@ -736,15 +625,13 @@ function readItemEditor(side){
   rows.forEach(row=>{
     const text=row.querySelector('input').value.trim();
     if(!text)return;
-    const color=row.querySelector('select').value;
-    result.push({text,color});
+    result.push({text,color:row.querySelector('select').value});
   });
   return result;
 }
 
-// ── TILE FORMS ────────────────────────────────────────────────────────────
 function buildTileForms(tiles){
-  const wrap=document.getElementById('tile-forms');wrap.innerHTML='';
+  const wrap=document.getElementById('tile-forms'); wrap.innerHTML='';
   for(let i=0;i<4;i++){
     const t=tiles[i]||{type:'none'};
     const box=document.createElement('div');
@@ -753,14 +640,13 @@ function buildTileForms(tiles){
       <div class="tile-form-label">Tile ${TILE_ALPHA[i]}</div>
       <input class="form-input" id="tf-title-${i}" placeholder="Tile heading" value="${esc(t.title||'')}">
       <select class="form-select" id="tf-type-${i}" onchange="updateTileFields(${i})">
-        <option value="none">— Empty</option>
-        <option value="chart">📊 Chart</option>
-        <option value="image">🖼 Image URL</option>
-        <option value="video">▶ YouTube</option>
-        <option value="notes">📝 Notes</option>
+        <option value="none">Empty</option>
+        <option value="chart">Chart</option>
+        <option value="image">Image URL</option>
+        <option value="video">YouTube Video</option>
+        <option value="notes">Notes</option>
       </select>
-      <div id="tf-fields-${i}"></div>
-    `;
+      <div id="tf-fields-${i}"></div>`;
     wrap.appendChild(box);
     document.getElementById(`tf-type-${i}`).value=t.type||'none';
     updateTileFields(i,t);
@@ -769,48 +655,44 @@ function buildTileForms(tiles){
 
 function updateTileFields(i,prefill){
   const type=document.getElementById(`tf-type-${i}`).value;
-  const w=document.getElementById(`tf-fields-${i}`);w.innerHTML='';
+  const w=document.getElementById(`tf-fields-${i}`); w.innerHTML='';
   if(type==='chart'){
     w.innerHTML=`
       <select class="form-select" id="tf-ct-${i}" style="margin-top:5px"><option value="line">Line</option><option value="bar">Bar</option></select>
       <input class="form-input" id="tf-cl-${i}" placeholder="KPI label" style="margin-top:5px">
-      <input class="form-input" id="tf-cla-${i}" placeholder="Labels: Wk1,Wk2,…" style="margin-top:5px">
-      <input class="form-input" id="tf-cd-${i}" placeholder="Values: 97.2,98.1,…" style="margin-top:5px">
-    `;
+      <input class="form-input" id="tf-cla-${i}" placeholder="Labels: Wk1,Wk2,..." style="margin-top:5px">
+      <input class="form-input" id="tf-cd-${i}" placeholder="Values: 97.2,98.1,..." style="margin-top:5px">`;
     if(prefill&&prefill.type==='chart'){
       document.getElementById(`tf-ct-${i}`).value=prefill.chartType||'line';
       document.getElementById(`tf-cl-${i}`).value=prefill.chartLabel||'';
       document.getElementById(`tf-cla-${i}`).value=prefill.chartLabels||'';
       document.getElementById(`tf-cd-${i}`).value=prefill.chartData||'';
     }
-  }else if(type==='image'){
-    // URL entry OR file upload
+  } else if(type==='image'){
     const existing=prefill&&prefill.type==='image'?prefill.imageUrl||'':'';
     w.innerHTML=`
-      <input class="form-input" id="tf-img-${i}" placeholder="Paste image URL…" value="${esc(existing)}" style="margin-top:5px">
-      <div style="text-align:center;font-size:.7rem;color:var(--ink4);margin:6px 0;">— or upload —</div>
-      <label class="upload-area" id="tf-img-upload-label-${i}">
+      <input class="form-input" id="tf-img-${i}" placeholder="Paste image URL..." value="${esc(existing)}" style="margin-top:5px">
+      <div style="text-align:center;font-size:.7rem;color:var(--ink4);margin:6px 0;">or upload</div>
+      <label class="upload-area">
         <input type="file" id="tf-img-file-${i}" accept="image/*" onchange="handleImageUpload(${i})">
-        <div class="upload-area-label">📁 Click to upload an image</div>
+        <div class="upload-area-label">Click to upload an image</div>
         <div class="upload-filename" id="tf-img-fname-${i}"></div>
         <img class="upload-preview" id="tf-img-preview-${i}" src="" style="display:none">
-      </label>
-    `;
-  }else if(type==='video'){
+      </label>`;
+  } else if(type==='video'){
     const existing=prefill&&prefill.type==='video'?prefill.videoUrl||'':'';
     w.innerHTML=`
-      <input class="form-input" id="tf-vid-${i}" placeholder="Paste YouTube or video URL…" value="${esc(existing)}" style="margin-top:5px">
-      <div style="text-align:center;font-size:.7rem;color:var(--ink4);margin:6px 0;">— or upload video file —</div>
-      <label class="upload-area" id="tf-vid-upload-label-${i}">
+      <input class="form-input" id="tf-vid-${i}" placeholder="Paste YouTube URL..." value="${esc(existing)}" style="margin-top:5px">
+      <div style="text-align:center;font-size:.7rem;color:var(--ink4);margin:6px 0;">or upload</div>
+      <label class="upload-area">
         <input type="file" id="tf-vid-file-${i}" accept="video/*" onchange="handleVideoUpload(${i})">
-        <div class="upload-area-label">📁 Click to upload a video</div>
+        <div class="upload-area-label">Click to upload a video</div>
         <div class="upload-filename" id="tf-vid-fname-${i}"></div>
       </label>
-      <div style="font-size:.68rem;color:var(--ink4);margin-top:5px;">💡 For large videos, uploading to YouTube and pasting the URL is recommended.</div>
-    `;
-  }else if(type==='notes'){
+      <div style="font-size:.68rem;color:var(--ink4);margin-top:5px;">For large videos, YouTube URL is recommended.</div>`;
+  } else if(type==='notes'){
     w.innerHTML=`<textarea class="form-textarea" id="tf-notes-${i}" rows="3" style="margin-top:5px"></textarea>`;
-    if(prefill&&prefill.type==='notes')document.getElementById(`tf-notes-${i}`).value=prefill.notes||'';
+    if(prefill&&prefill.type==='notes') document.getElementById(`tf-notes-${i}`).value=prefill.notes||'';
   }
 }
 
@@ -821,9 +703,7 @@ function handleImageUpload(i){
   const reader=new FileReader();
   reader.onload=e=>{
     const preview=document.getElementById(`tf-img-preview-${i}`);
-    preview.src=e.target.result;
-    preview.style.display='block';
-    // Store as base64 data URL in the URL field so readTile picks it up
+    preview.src=e.target.result; preview.style.display='block';
     document.getElementById(`tf-img-${i}`).value=e.target.result;
   };
   reader.readAsDataURL(file);
@@ -832,21 +712,18 @@ function handleImageUpload(i){
 function handleVideoUpload(i){
   const file=document.getElementById(`tf-vid-file-${i}`).files[0];
   if(!file)return;
-  document.getElementById(`tf-vid-fname-${i}`).textContent=file.name;
-  // Create an object URL for local playback; note this won't persist to Sheets
-  // For persistent video, users should upload to YouTube and paste the URL
   const objUrl=URL.createObjectURL(file);
   document.getElementById(`tf-vid-${i}`).value=objUrl;
-  document.getElementById(`tf-vid-fname-${i}`).textContent=`${file.name} (local preview only — use YouTube URL for persistence)`;
+  document.getElementById(`tf-vid-fname-${i}`).textContent=`${file.name} (local only - use YouTube for persistence)`;
 }
 
 function readTile(i){
   const type=document.getElementById(`tf-type-${i}`).value;
   const title=document.getElementById(`tf-title-${i}`).value.trim();
-  if(type==='chart')return{type,title,chartType:document.getElementById(`tf-ct-${i}`)?.value||'line',chartLabel:document.getElementById(`tf-cl-${i}`)?.value||'',chartLabels:document.getElementById(`tf-cla-${i}`)?.value||'',chartData:document.getElementById(`tf-cd-${i}`)?.value||''};
-  if(type==='image')return{type,title,imageUrl:document.getElementById(`tf-img-${i}`)?.value||''};
-  if(type==='video')return{type,title,videoUrl:document.getElementById(`tf-vid-${i}`)?.value||''};
-  if(type==='notes')return{type,title,notes:document.getElementById(`tf-notes-${i}`)?.value||''};
+  if(type==='chart') return{type,title,chartType:document.getElementById(`tf-ct-${i}`)?.value||'line',chartLabel:document.getElementById(`tf-cl-${i}`)?.value||'',chartLabels:document.getElementById(`tf-cla-${i}`)?.value||'',chartData:document.getElementById(`tf-cd-${i}`)?.value||''};
+  if(type==='image') return{type,title,imageUrl:document.getElementById(`tf-img-${i}`)?.value||''};
+  if(type==='video') return{type,title,videoUrl:document.getElementById(`tf-vid-${i}`)?.value||''};
+  if(type==='notes') return{type,title,notes:document.getElementById(`tf-notes-${i}`)?.value||''};
   return{type:'none',title};
 }
 
@@ -857,14 +734,17 @@ async function saveModal(){
     twItems:readItemEditor('tw'),
     tiles:[0,1,2,3].map(i=>readTile(i))
   };
-  closeModal();refreshSlotData(currentIdx);buildDots();
+  closeModal();
+  refreshSlotData(currentIdx);
+  buildDots();
   await saveToSheet(dept);
 }
 
 function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
-document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target===document.getElementById('modal-overlay'))closeModal();});
+document.getElementById('modal-overlay').addEventListener('click',e=>{
+  if(e.target===document.getElementById('modal-overlay'))closeModal();
+});
 
-// ── UTILS ─────────────────────────────────────────────────────────────────
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function ytEmbed(url){const m=url.match(/(?:youtu\.be\/|[?&]v=)([a-zA-Z0-9_-]{11})/);return m?`https://www.youtube.com/embed/${m[1]}`:url;}
 
