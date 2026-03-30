@@ -45,11 +45,59 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 @keyframes pulse-dot{0%,100%{opacity:1;}50%{opacity:.3;}}
 .sync-status{font-size:.7rem;font-family:'DM Mono',monospace;color:var(--ink3);display:flex;align-items:center;gap:5px;}
 
-/* STAGE */
-/* FIX: Removed perspective from .stage — perspective is applied per-slot instead
-   so the active flipped card escapes the perspective context and stays pixel-sharp */
-.stage{flex:1;display:flex;align-items:center;justify-content:center;overflow:visible;padding:16px 0 64px;position:relative;z-index:20;}
-.coverflow{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:visible;}
+/* STAGE — coverflow */
+.stage{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  overflow:hidden;padding:0;position:relative;z-index:20;
+  background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);
+}
+/* subtle centre spotlight */
+.stage::after{
+  content:'';position:absolute;
+  top:10%;left:50%;transform:translateX(-50%);
+  width:60%;height:60%;
+  background:radial-gradient(ellipse at center,rgba(37,99,235,.04) 0%,transparent 70%);
+  pointer-events:none;z-index:1;
+}
+.coverflow{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:visible;z-index:2;perspective:1800px;transform-style:preserve-3d;}
+
+/* REFLECTION — mirror image below card, fades out */
+.card-reflection{
+  position:absolute;
+  width:var(--card-w);
+  height:var(--card-h);
+  pointer-events:none;
+  transform-origin:center top;
+  z-index:1;
+  top:50%;
+}
+.card-reflection-inner{
+  width:100%;height:100%;
+  transform:scaleY(-1);
+  border-radius:var(--radius);
+  overflow:hidden;
+  -webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,.28) 0%,transparent 55%);
+  mask-image:linear-gradient(180deg,rgba(0,0,0,.28) 0%,transparent 55%);
+}
+
+/* ALBUM LABEL below active card */
+#album-label{
+  position:absolute;
+  bottom:54px;left:50%;transform:translateX(-50%);
+  z-index:50;
+  text-align:center;
+  pointer-events:none;
+  transition:opacity .3s;
+}
+#album-label .al-dept{
+  font-size:1.05rem;font-weight:700;color:var(--ink);
+  letter-spacing:-.01em;text-shadow:none;
+}
+#album-label .al-sub{
+  font-size:.7rem;font-family:'DM Mono',monospace;
+  color:var(--ink3);margin-top:2px;
+  letter-spacing:.06em;text-transform:uppercase;
+}
 
 /* DIM OVERLAY */
 #flip-dim{
@@ -79,11 +127,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
   width:var(--card-w);
   height:var(--card-h);
   transform-style:preserve-3d;
-  transition:transform .55s cubic-bezier(.4,0,.2,1),opacity .5s,filter .5s,box-shadow .5s;
+  transition:transform .55s cubic-bezier(.4,0,.2,1),opacity .5s,box-shadow .5s;
   cursor:pointer;
   will-change:transform,opacity;
   transform-origin:center center;
-  perspective:1200px;
 }
 .card-slot.is-active{cursor:default;z-index:99;}
 .card-slot.is-active.is-flipped{z-index:99;}
@@ -230,6 +277,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
   <div class="coverflow" id="coverflow">
     <button class="nav-arrow prev" id="btn-prev" onclick="navigate(-1)" disabled>‹</button>
     <button class="nav-arrow next" id="btn-next" onclick="navigate(1)">›</button>
+  </div>
+  <div id="album-label">
+    <div class="al-dept" id="al-dept-name"></div>
+    <div class="al-sub" id="al-dept-sub"></div>
   </div>
 </div>
 
@@ -385,9 +436,11 @@ async function init(){
   refreshAllSlots();
   positionSlots(false);
   buildDots();
+  updateAlbumLabel();
   await loadFromSheet();
   refreshAllSlots();
   buildDots();
+  updateAlbumLabel();
 }
 
 // ── DOTS ──────────────────────────────────────────────────────────────────
@@ -408,9 +461,16 @@ function buildDots(){
 const slots=[];
 function buildCoverflow(){
   const track=document.getElementById('coverflow');
-  track.querySelectorAll('.card-slot').forEach(el=>el.remove());
+  track.querySelectorAll('.card-slot,.card-reflection').forEach(el=>el.remove());
   slots.length=0;
   DEPARTMENTS.forEach((dept,i)=>{
+    // reflection element (behind card, flipped vertically, faded)
+    const ref=document.createElement('div');
+    ref.className='card-reflection';
+    ref.id=`ref-${i}`;
+    ref.innerHTML=`<div class="card-reflection-inner" id="ref-inner-${i}"></div>`;
+    track.appendChild(ref);
+
     const slot=document.createElement('div');
     slot.className='card-slot';
     slot.dataset.idx=i;
@@ -479,28 +539,46 @@ function positionSlots(animate){
     const diff=i-currentIdx;
     const isFlippedSlot=slot.classList.contains('is-flipped');
     let tx=0,scale=1,ry=0,opacity=1,zIndex=1,pe='none';
+    // Gentle coverflow: side cards slightly slanted, not aggressively tilted
     if(diff===0){
       tx=0;scale=1;ry=0;opacity=1;zIndex=isFlippedSlot?20:10;pe='auto';
     } else if(diff===-1){
-      tx=-cw*0.62;scale=0.82;ry=38;opacity=0.72;zIndex=5;pe='auto';
+      tx=-cw*0.58;scale=0.84;ry=18;opacity=0.82;zIndex=5;pe='auto';
     } else if(diff===1){
-      tx=cw*0.62;scale=0.82;ry=-38;opacity=0.72;zIndex=5;pe='auto';
+      tx=cw*0.58;scale=0.84;ry=-18;opacity=0.82;zIndex=5;pe='auto';
     } else if(diff===-2){
-      tx=-cw*1.08;scale=0.66;ry=52;opacity=0.3;zIndex=2;
+      tx=-cw*0.96;scale=0.68;ry=22;opacity=0.38;zIndex=2;
     } else if(diff===2){
-      tx=cw*1.08;scale=0.66;ry=-52;opacity=0.3;zIndex=2;
+      tx=cw*0.96;scale=0.68;ry=-22;opacity=0.38;zIndex=2;
+    } else if(diff===-3){
+      tx=-cw*1.18;scale=0.54;ry=25;opacity=0.15;zIndex=1;
+    } else if(diff===3){
+      tx=cw*1.18;scale=0.54;ry=-25;opacity=0.15;zIndex=1;
     } else {
-      tx=diff<0?-cw*1.6:cw*1.6;scale=0.5;opacity=0;zIndex=0;
+      tx=diff<0?-cw*1.4:cw*1.4;scale=0.45;opacity=0;zIndex=0;
     }
-    const tr=animate?'transform .5s cubic-bezier(.4,0,.2,1),opacity .45s':'none';
-    // FIX: no translateZ in any slot transform — keep everything on the 2D plane
-    // to avoid sub-pixel blur from perspective depth calculations
+    const tr=animate?'transform .48s cubic-bezier(.25,.46,.45,.94),opacity .38s':'none';
     if(isFlippedSlot && diff===0){
       slot.style.cssText=`transition:${tr};transform:scale(1.18);opacity:1;z-index:20;pointer-events:auto;`;
     } else {
       slot.style.cssText=`transition:${tr};transform:translateX(${tx}px) scale(${scale}) rotateY(${ry}deg);opacity:${opacity};z-index:${zIndex};pointer-events:${pe};`;
     }
+    // update reflection slot
+    const ref=document.getElementById(`ref-${i}`);
+    if(ref){
+      ref.style.cssText=`transition:${tr};transform:translateX(${tx}px) scale(${scale}) rotateY(${ry}deg);opacity:${Math.min(opacity*0.5,0.35)};z-index:${Math.max(zIndex-1,0)};pointer-events:none;`;
+    }
   });
+  // update album label
+  updateAlbumLabel();
+}
+
+function updateAlbumLabel(){
+  const dept=DEPARTMENTS[currentIdx];
+  const d=deptData[dept]||{};
+  const total=(d.lwItems||[]).length+(d.twItems||[]).length;
+  document.getElementById('al-dept-name').textContent=dept;
+  document.getElementById('al-dept-sub').textContent=total>0?`${total} item${total!==1?'s':''} this week`:'No items yet';
 }
 
 window.addEventListener('resize',()=>positionSlots(false));
@@ -526,8 +604,27 @@ function refreshSlotData(i){
   renderItems(`tw-items-${i}`,d.twItems||[]);
   destroyChartsForSlot(i);
   renderTilesForSlot(i,d.tiles||[]);
+  syncReflection(i);
 }
 function refreshAllSlots(){DEPARTMENTS.forEach((_,i)=>refreshSlotData(i));}
+
+function syncReflection(i){
+  const refInner=document.getElementById(`ref-inner-${i}`);
+  const faceFront=document.querySelector(`#flipcard-${i} .face-front`);
+  if(!refInner||!faceFront)return;
+  // Clone the card face into the reflection
+  refInner.innerHTML='';
+  const clone=faceFront.cloneNode(true);
+  // Remove interactive elements from clone
+  clone.querySelectorAll('button,input,select,textarea').forEach(el=>el.remove());
+  clone.style.position='relative';
+  clone.style.borderRadius=getComputedStyle(document.documentElement).getPropertyValue('--radius');
+  clone.style.overflow='hidden';
+  clone.style.width='100%';
+  clone.style.height='100%';
+  clone.style.pointerEvents='none';
+  refInner.appendChild(clone);
+}
 
 // ── BACK TILES ─────────────────────────────────────────────────────────────
 function renderTilesForSlot(si,tiles){
@@ -599,7 +696,8 @@ function toggleFlip(){
   const tr='transform .55s cubic-bezier(.4,0,.2,1),opacity .45s,box-shadow .55s';
   if(flipped){
     slot.classList.add('is-flipped');
-    slot.style.cssText=`transition:${tr};transform:translateY(-4%) scale(1.2);opacity:1;z-index:99;pointer-events:auto;box-shadow:0 40px 100px rgba(0,0,0,.35),0 20px 40px rgba(0,0,0,.2);`;
+    // Use translate3d(0,0,0) to stay on screen plane — no depth push through perspective
+    slot.style.cssText=`transition:${tr};transform:translateY(-4%) scale(1.18) rotateY(0deg);opacity:1;z-index:20;pointer-events:auto;box-shadow:0 40px 100px rgba(0,0,0,.2),0 20px 40px rgba(0,0,0,.1);`;
   } else {
     slot.classList.remove('is-flipped');
     slot.style.cssText=`transition:${tr};transform:translateX(0px) scale(1) rotateY(0deg);opacity:1;z-index:99;pointer-events:auto;`;
@@ -621,6 +719,7 @@ function navigate(dir){
   currentIdx=next;
   positionSlots(true);
   buildDots();
+  updateAlbumLabel();
 }
 
 document.addEventListener('keydown',e=>{
@@ -684,9 +783,7 @@ function buildTileForms(tiles){
       <input class="form-input" id="tf-title-${i}" placeholder="Tile heading" value="${esc(t.title||'')}">
       <select class="form-select" id="tf-type-${i}" onchange="updateTileFields(${i})">
         <option value="none">Empty</option>
-        <option value="chart">Chart</option>
         <option value="image">Image URL</option>
-        <option value="video">YouTube Video</option>
         <option value="notes">Notes</option>
       </select>
       <div id="tf-fields-${i}"></div>`;
