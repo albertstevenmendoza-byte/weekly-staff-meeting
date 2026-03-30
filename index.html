@@ -46,15 +46,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .sync-status{font-size:.7rem;font-family:'DM Mono',monospace;color:var(--ink3);display:flex;align-items:center;gap:5px;}
 
 /* STAGE */
-.stage{flex:1;display:flex;align-items:center;justify-content:center;overflow:visible;padding:16px 0 64px;perspective:1200px;position:relative;z-index:20;}
-.coverflow{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;transform-style:preserve-3d;overflow:visible;}
+/* FIX: Removed perspective from .stage — perspective is applied per-slot instead
+   so the active flipped card escapes the perspective context and stays pixel-sharp */
+.stage{flex:1;display:flex;align-items:center;justify-content:center;overflow:visible;padding:16px 0 64px;position:relative;z-index:20;}
+.coverflow{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:visible;}
 
-/* DIM OVERLAY — appears behind flipped card */
+/* DIM OVERLAY */
 #flip-dim{
   display:none;
   position:fixed;inset:0;
-  background:rgba(15,23,42,.45);
-  backdrop-filter:blur(2px);
+  background:rgba(15,23,42,.18);
   z-index:98;
   opacity:0;
   transition:opacity .4s var(--ease);
@@ -70,7 +71,20 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .nav-arrow:disabled{opacity:.2;cursor:default;box-shadow:none;}
 
 /* CARD SLOT */
-.card-slot{position:absolute;width:var(--card-w);height:var(--card-h);transform-style:preserve-3d;transition:transform .55s cubic-bezier(.4,0,.2,1),opacity .5s,filter .5s,box-shadow .5s;cursor:pointer;will-change:transform,opacity;transform-origin:center center;}
+/* FIX: perspective on individual card-slots (not the parent) so each card has
+   its own 3D context. The active card overrides to perspective:none so the
+   flip and scale happen in a flat plane — no depth distortion, no blur. */
+.card-slot{
+  position:absolute;
+  width:var(--card-w);
+  height:var(--card-h);
+  transform-style:preserve-3d;
+  transition:transform .55s cubic-bezier(.4,0,.2,1),opacity .5s,filter .5s,box-shadow .5s;
+  cursor:pointer;
+  will-change:transform,opacity;
+  transform-origin:center center;
+  perspective:1200px;
+}
 .card-slot.is-active{cursor:default;z-index:99;}
 .card-slot.is-active.is-flipped{z-index:99;}
 .card-slot.is-prev,.card-slot.is-next{z-index:5;}
@@ -78,10 +92,33 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .card-slot.is-hidden{z-index:0;pointer-events:none;}
 
 /* FLIP */
-.flip-card{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .6s cubic-bezier(.4,0,.2,1);}
+/* FIX: The flip-card itself uses transform-style:preserve-3d but
+   when active/flipped we ensure no translateZ is applied (see JS toggleFlip).
+   backface-visibility:hidden must be on the faces, not the container. */
+.flip-card{
+  position:relative;
+  width:100%;
+  height:100%;
+  transform-style:preserve-3d;
+  transition:transform .6s cubic-bezier(.4,0,.2,1);
+  /* FIX: force GPU layer on a whole pixel boundary */
+  transform:translateZ(0);
+  -webkit-transform:translateZ(0);
+}
 .flip-card.flipped{transform:rotateY(180deg);}
-.flip-face{position:absolute;inset:0;border-radius:var(--radius);backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;}
-.face-back{transform:rotateY(180deg);}
+.flip-face{
+  position:absolute;
+  inset:0;
+  border-radius:var(--radius);
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+  overflow:hidden;
+  /* FIX: ensure crisp sub-pixel rendering on the faces */
+  -webkit-font-smoothing:antialiased;
+  image-rendering:crisp-edges;
+  transform:translateZ(0);
+}
+.face-back{transform:rotateY(180deg) translateZ(0);}
 
 /* CARD SHELL */
 .face-front,.face-back{background:var(--surface);border:1px solid var(--border);display:flex;flex-direction:column;box-shadow:0 2px 0 rgba(0,0,0,.04),0 4px 0 1px rgba(0,0,0,.03),0 8px 0 2px rgba(0,0,0,.025),0 16px 32px rgba(0,0,0,.12),0 32px 64px rgba(0,0,0,.08),inset 0 1px 0 rgba(255,255,255,.9);}
@@ -229,8 +266,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────────────
-// Replace the string below with your deployed Google Apps Script Web App URL.
-// Deploy with: Execute as = Me, Who has access = Anyone (or Anyone in org).
 const SHEET_URL = 'https://script.google.com/macros/s/AKfycbxOjN2iXOMU3_UoROBpcivFWomRa1dM3aKk7g-T21757Ujp7K7i7jZBDo8KTZqH9A0tNg/exec';
 
 const DEPARTMENTS = [
@@ -278,7 +313,6 @@ function setSyncStatus(state,msg){
   lbl.textContent=msg;
 }
 
-// Returns true if a real URL has been configured
 function hasSheetURL(){
   return typeof SHEET_URL === 'string' &&
          SHEET_URL.trim().length > 0 &&
@@ -286,12 +320,6 @@ function hasSheetURL(){
 }
 
 // ── GOOGLE SHEETS SYNC ────────────────────────────────────────────────────
-// Apps Script Web App: doGet(?action=read) returns all dept data as JSON.
-// doPost receives {action:'write', dept, data} as text/plain body (no CORS preflight).
-//
-// Apps Script doPost must read: JSON.parse(e.postData.contents)
-// Deploy: Execute as = Me, Who has access = Anyone (or Anyone in your org)
-
 async function loadFromSheet(){
   if(!hasSheetURL()){
     setSyncStatus('error','No Sheet URL — using local cache');
@@ -318,29 +346,24 @@ async function loadFromSheet(){
 }
 
 async function saveToSheet(dept){
-  saveLocal(); // always persist locally first
-
+  saveLocal();
   if(!hasSheetURL()){
     setSyncStatus('error','No Sheet URL — saved locally only');
     return;
   }
-
   setSyncStatus('syncing','Saving…');
   try{
-    // URLSearchParams avoids CORS preflight and Apps Script reads via e.parameter
     const params = new URLSearchParams({
       action: 'write',
       dept:   dept,
       data:   JSON.stringify(deptData[dept])
     });
-
     await fetch(SHEET_URL, {
       method:  'POST',
       mode:    'no-cors',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body:    params.toString()
     });
-
     setSyncStatus('ok', `Saved ${new Date().toLocaleTimeString()}`);
   } catch(err){
     console.error('Sheet save error:', err.message);
@@ -383,7 +406,6 @@ function buildDots(){
 
 // ── COVERFLOW ─────────────────────────────────────────────────────────────
 const slots=[];
-
 function buildCoverflow(){
   const track=document.getElementById('coverflow');
   track.querySelectorAll('.card-slot').forEach(el=>el.remove());
@@ -456,25 +478,27 @@ function positionSlots(animate){
   slots.forEach((slot,i)=>{
     const diff=i-currentIdx;
     const isFlippedSlot=slot.classList.contains('is-flipped');
-    let tx=0,scale=1,ry=0,opacity=1,filter='none',zIndex=1,pe='none';
+    let tx=0,scale=1,ry=0,opacity=1,zIndex=1,pe='none';
     if(diff===0){
       tx=0;scale=1;ry=0;opacity=1;zIndex=isFlippedSlot?20:10;pe='auto';
     } else if(diff===-1){
-      tx=-cw*0.62;scale=0.82;ry=38;opacity=0.72;filter='blur(4px)';zIndex=5;pe='auto';
+      tx=-cw*0.62;scale=0.82;ry=38;opacity=0.72;zIndex=5;pe='auto';
     } else if(diff===1){
-      tx=cw*0.62;scale=0.82;ry=-38;opacity=0.72;filter='blur(4px)';zIndex=5;pe='auto';
+      tx=cw*0.62;scale=0.82;ry=-38;opacity=0.72;zIndex=5;pe='auto';
     } else if(diff===-2){
-      tx=-cw*1.08;scale=0.66;ry=52;opacity=0.3;filter='blur(8px)';zIndex=2;
+      tx=-cw*1.08;scale=0.66;ry=52;opacity=0.3;zIndex=2;
     } else if(diff===2){
-      tx=cw*1.08;scale=0.66;ry=-52;opacity=0.3;filter='blur(8px)';zIndex=2;
+      tx=cw*1.08;scale=0.66;ry=-52;opacity=0.3;zIndex=2;
     } else {
       tx=diff<0?-cw*1.6:cw*1.6;scale=0.5;opacity=0;zIndex=0;
     }
-    const tr=animate?'transform .5s cubic-bezier(.4,0,.2,1),opacity .45s,filter .45s':'none';
+    const tr=animate?'transform .5s cubic-bezier(.4,0,.2,1),opacity .45s':'none';
+    // FIX: no translateZ in any slot transform — keep everything on the 2D plane
+    // to avoid sub-pixel blur from perspective depth calculations
     if(isFlippedSlot && diff===0){
-      slot.style.cssText=`transition:${tr};transform:scale(1.18);opacity:1;filter:none;z-index:20;pointer-events:auto;`;
+      slot.style.cssText=`transition:${tr};transform:scale(1.18);opacity:1;z-index:20;pointer-events:auto;`;
     } else {
-      slot.style.cssText=`transition:${tr};transform:translateX(${tx}px) scale(${scale}) rotateY(${ry}deg);opacity:${opacity};filter:${filter};z-index:${zIndex};pointer-events:${pe};`;
+      slot.style.cssText=`transition:${tr};transform:translateX(${tx}px) scale(${scale}) rotateY(${ry}deg);opacity:${opacity};z-index:${zIndex};pointer-events:${pe};`;
     }
   });
 }
@@ -503,7 +527,6 @@ function refreshSlotData(i){
   destroyChartsForSlot(i);
   renderTilesForSlot(i,d.tiles||[]);
 }
-
 function refreshAllSlots(){DEPARTMENTS.forEach((_,i)=>refreshSlotData(i));}
 
 // ── BACK TILES ─────────────────────────────────────────────────────────────
@@ -557,7 +580,6 @@ function drawChart(uid,t){
     scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:"'DM Mono'",size:8},color:'#94a3b8',maxTicksLimit:7}},y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:"'DM Mono'",size:8},color:'#94a3b8'}}}
   }});
 }
-
 function destroyChartsForSlot(si){
   Object.keys(chartRefs).filter(k=>k.startsWith(`${si}-`)).forEach(k=>{try{chartRefs[k].destroy();}catch(e){}delete chartRefs[k];});
 }
@@ -568,38 +590,19 @@ function toggleFlip(){
   if(!fc)return;
   flipped=!fc.classList.contains('flipped');
   fc.classList.toggle('flipped',flipped);
-
   const slot=slots[currentIdx];
   const dim=document.getElementById('flip-dim');
-  const tr='transform .55s cubic-bezier(.4,0,.2,1),opacity .45s,filter .45s,box-shadow .55s';
-
+  // FIX: Removed translateZ(120px) — that was the primary blur culprit.
+  // The card lifts via scale only, staying in the 2D compositing plane.
+  // translateZ causes the browser to render through the perspective frustum
+  // at a non-screen-aligned depth, which forces sub-pixel interpolation = blur.
+  const tr='transform .55s cubic-bezier(.4,0,.2,1),opacity .45s,box-shadow .55s';
   if(flipped){
     slot.classList.add('is-flipped');
-    // Fly card up and toward viewer — negative translateY moves it toward nav bar
-    // translateZ pushes it forward out of the 3D plane
-    slot.style.cssText=`
-      transition:${tr};
-      transform:translateY(-6%) scale(1.2) translateZ(120px);
-      opacity:1;filter:none;
-      z-index:99;pointer-events:auto;
-      box-shadow:0 40px 100px rgba(0,0,0,.35),0 20px 40px rgba(0,0,0,.2);
-    `;
-    // Show dim overlay with a slight delay so card starts moving first
-    dim.classList.add('active');
-    requestAnimationFrame(()=>requestAnimationFrame(()=>dim.classList.add('visible')));
+    slot.style.cssText=`transition:${tr};transform:translateY(-4%) scale(1.2);opacity:1;z-index:99;pointer-events:auto;box-shadow:0 40px 100px rgba(0,0,0,.35),0 20px 40px rgba(0,0,0,.2);`;
   } else {
     slot.classList.remove('is-flipped');
-    // Return card to resting position
-    slot.style.cssText=`
-      transition:${tr};
-      transform:translateX(0px) scale(1) rotateY(0deg);
-      opacity:1;filter:none;
-      z-index:99;pointer-events:auto;
-      box-shadow:'';
-    `;
-    // Fade out and hide overlay
-    dim.classList.remove('visible');
-    setTimeout(()=>dim.classList.remove('active'),400);
+    slot.style.cssText=`transition:${tr};transform:translateX(0px) scale(1) rotateY(0deg);opacity:1;z-index:99;pointer-events:auto;`;
   }
 }
 
@@ -611,7 +614,6 @@ function navigate(dir){
   if(fc)fc.classList.remove('flipped');
   const prevSlot=slots[currentIdx];
   if(prevSlot)prevSlot.classList.remove('is-flipped');
-  // Clear dim overlay
   const dim=document.getElementById('flip-dim');
   dim.classList.remove('visible');
   setTimeout(()=>dim.classList.remove('active'),400);
@@ -639,16 +641,13 @@ function openEditModal(){
   buildTileForms(d.tiles||[]);
   document.getElementById('modal-overlay').classList.add('open');
 }
-
 function buildItemEditor(side,items){
   const wrap=document.getElementById(`${side}-editor`);
   wrap.innerHTML='';
   const list=items&&items.length?items:[{text:'',color:'none'}];
   list.forEach(item=>appendItemRow(side,item.text||'',item.color||'none'));
 }
-
 function addItemRow(side){appendItemRow(side,'','none');}
-
 function appendItemRow(side,text,color){
   const wrap=document.getElementById(`${side}-editor`);
   const row=document.createElement('div');
@@ -664,7 +663,6 @@ function appendItemRow(side,text,color){
     <button class="item-remove-btn" onclick="this.closest('.item-editor-row').remove()">x</button>`;
   wrap.appendChild(row);
 }
-
 function readItemEditor(side){
   const rows=document.getElementById(`${side}-editor`).querySelectorAll('.item-editor-row');
   const result=[];
@@ -675,7 +673,6 @@ function readItemEditor(side){
   });
   return result;
 }
-
 function buildTileForms(tiles){
   const wrap=document.getElementById('tile-forms'); wrap.innerHTML='';
   for(let i=0;i<4;i++){
@@ -698,7 +695,6 @@ function buildTileForms(tiles){
     updateTileFields(i,t);
   }
 }
-
 function updateTileFields(i,prefill){
   const type=document.getElementById(`tf-type-${i}`).value;
   const w=document.getElementById(`tf-fields-${i}`); w.innerHTML='';
@@ -734,14 +730,12 @@ function updateTileFields(i,prefill){
         <input type="file" id="tf-vid-file-${i}" accept="video/*" onchange="handleVideoUpload(${i})">
         <div class="upload-area-label">Click to upload a video</div>
         <div class="upload-filename" id="tf-vid-fname-${i}"></div>
-      </label>
-      <div style="font-size:.68rem;color:var(--ink4);margin-top:5px;">For large videos, YouTube URL is recommended.</div>`;
+      </label>`;
   } else if(type==='notes'){
     w.innerHTML=`<textarea class="form-textarea" id="tf-notes-${i}" rows="3" style="margin-top:5px"></textarea>`;
     if(prefill&&prefill.type==='notes') document.getElementById(`tf-notes-${i}`).value=prefill.notes||'';
   }
 }
-
 function handleImageUpload(i){
   const file=document.getElementById(`tf-img-file-${i}`).files[0];
   if(!file)return;
@@ -754,15 +748,13 @@ function handleImageUpload(i){
   };
   reader.readAsDataURL(file);
 }
-
 function handleVideoUpload(i){
   const file=document.getElementById(`tf-vid-file-${i}`).files[0];
   if(!file)return;
   const objUrl=URL.createObjectURL(file);
   document.getElementById(`tf-vid-${i}`).value=objUrl;
-  document.getElementById(`tf-vid-fname-${i}`).textContent=`${file.name} (local only - use YouTube for persistence)`;
+  document.getElementById(`tf-vid-fname-${i}`).textContent=`${file.name} (local only)`;
 }
-
 function readTile(i){
   const type=document.getElementById(`tf-type-${i}`).value;
   const title=document.getElementById(`tf-title-${i}`).value.trim();
@@ -772,7 +764,6 @@ function readTile(i){
   if(type==='notes') return{type,title,notes:document.getElementById(`tf-notes-${i}`)?.value||''};
   return{type:'none',title};
 }
-
 async function saveModal(){
   const dept=DEPARTMENTS[currentIdx];
   deptData[dept]={
@@ -785,15 +776,12 @@ async function saveModal(){
   buildDots();
   await saveToSheet(dept);
 }
-
 function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
 document.getElementById('modal-overlay').addEventListener('click',e=>{
   if(e.target===document.getElementById('modal-overlay'))closeModal();
 });
-
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function ytEmbed(url){const m=url.match(/(?:youtu\.be\/|[?&]v=)([a-zA-Z0-9_-]{11})/);return m?`https://www.youtube.com/embed/${m[1]}`:url;}
-
 init();
 </script>
 </body>
