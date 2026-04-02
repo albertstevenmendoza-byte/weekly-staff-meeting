@@ -1,3 +1,5 @@
+--- START OF FILE Paste April 02, 2026 - 10:05AM ---
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -50,26 +52,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .stage{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;z-index:20;background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);}
 .coverflow{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:visible;z-index:2;perspective:1800px;transform-style:preserve-3d;}
 
-/* REFLECTION - FIXED POSITION TO AVOID OVERLAPPING CARDS */
-.card-reflection{
-  position:absolute;
-  width:var(--card-w);
-  height:var(--card-h);
-  pointer-events:none;
-  transform-origin:center top;
-  z-index:1;
-  /* Shifted from top:50% to the bottom edge of the centered card */
-  top:calc(50% + (var(--card-h) / 2) + 2px); 
-}
-.card-reflection-inner{
-  width:100%;
-  height:100%;
-  transform:scaleY(-1);
-  border-radius:var(--radius);
-  overflow:hidden;
-  -webkit-mask-image:linear-gradient(180deg, rgba(0,0,0,0.3) 0%, transparent 45%);
-  mask-image:linear-gradient(180deg, rgba(0,0,0,0.3) 0%, transparent 45%);
-}
+/* REFLECTION */
+.card-reflection{position:absolute;width:var(--card-w);height:var(--card-h);pointer-events:none;transform-origin:center top;z-index:1;top:calc(50% + (var(--card-h) / 2) + 2px);}
+.card-reflection-inner{width:100%;height:100%;transform:scaleY(-1);border-radius:var(--radius);overflow:hidden;-webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,.3) 0%,transparent 45%);mask-image:linear-gradient(180deg,rgba(0,0,0,.3) 0%,transparent 45%);}
 
 #album-label{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);z-index:50;text-align:center;pointer-events:none;transition:opacity .3s;}
 #album-label .al-dept{font-size:1.2rem;font-weight:800;color:var(--ink);letter-spacing:-.01em;}
@@ -107,7 +92,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .focus-half{display:flex;flex-direction:column;overflow:hidden;background:var(--surface);}
 .focus-half:first-child{border-right:1px solid var(--border);}
 
-/* BULLET HEADERS - CENTERED & BOLDED */
 .half-col-head{padding:12px 24px;border-bottom:1px solid var(--border);background:var(--bg2);display:flex;align-items:center;justify-content:center;gap:8px;}
 .half-col-label{font-size:.75rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);font-family:'DM Mono',monospace;text-align:center;}
 
@@ -117,32 +101,26 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .item-row.ic-yellow{border-left-color:var(--yellow-l);background:rgba(245,158,11,.05);color:var(--ink);}
 .item-row.ic-red{border-left-color:var(--red-l);background:rgba(239,68,68,.05);color:var(--ink);}
 
-/* FRONT BOTTOM TILES */
 .front-tiles-row{display:grid;grid-template-columns:1fr 1fr;height:35%;border-top:1px solid var(--border);background:var(--border);gap:1px;flex-shrink:0;}
 .front-tile{background:var(--surface);display:flex;flex-direction:column;overflow:hidden;}
 
 .front-footer{padding:16px 32px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg2);}
 .flip-hint{font-size:.75rem;color:var(--ink4);font-family:'DM Mono',monospace;}
 
-/* TILE HEADERS (SHARED FRONT & BACK) - CENTERED & BOLDED */
 .tile-hd{padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;justify-content:center;align-items:center;}
 .tile-hd-title{font-size:.65rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);text-align:center;}
 .tile-bd{flex:1;overflow:hidden;position:relative;}
 
-/* BACK TILES */
 .back-tiles{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;background:var(--border);overflow:hidden;}
 .back-tile{background:var(--surface);display:flex;flex-direction:column;overflow:hidden;}
 
-/* DOTS */
 .dots-nav{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:50;}
 .dept-dot{width:8px;height:8px;border-radius:50%;background:var(--border2);cursor:pointer;transition:all .3s;}
 .dept-dot.active{width:24px;border-radius:4px;background:var(--blue);}
 
-/* TIMER */
 #timer-widget{position:fixed;bottom:24px;right:24px;z-index:300;display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:10px 18px;box-shadow:0 10px 25px rgba(0,0,0,0.1);}
 .timer-display{font-family:'DM Mono',monospace;font-size:1.2rem;font-weight:600;min-width:60px;}
 
-/* MODAL UI */
 #modal-overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(15,23,42,0.6);backdrop-filter:blur(8px);align-items:center;justify-content:center;}
 #modal{background:var(--surface);border-radius:24px;width:min(720px, 95vw);max-height:85vh;display:flex;flex-direction:column;box-shadow:0 30px 60px rgba(0,0,0,0.25);overflow:hidden;border:1px solid rgba(255,255,255,0.1);}
 .modal-head{background:var(--ink);padding:24px 32px;display:flex;align-items:center;justify-content:space-between;}
@@ -172,6 +150,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .img-preview-thumb { margin-top: 8px; width: 100%; height: 60px; object-fit: cover; border-radius: 6px; display: none; }
 
 .modal-footer{padding:24px 32px;background:var(--bg2);border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:12px;}
+
+/* NEW METRIC STYLE */
+.metric-container{height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:10px;}
+.metric-value{font-size:3.2rem;font-weight:800;color:var(--blue);letter-spacing:-0.04em;line-height:1;}
 </style>
 </head>
 <body>
@@ -519,6 +501,7 @@ function renderTilesForSlot(si, prefix, tiles){
     if(!bd) continue;
     if(t.type==='notes') bd.innerHTML=`<div style="padding:10px; font-size:0.85rem; line-height:1.4; color:var(--ink2); white-space:pre-wrap;">${t.notes||''}</div>`;
     else if(t.type==='image') bd.innerHTML=`<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; padding:5px;"><img src="${t.imageUrl}" style="max-width:100%; max-height:100%; border-radius:6px; object-fit:contain;"></div>`;
+    else if(t.type==='metric') bd.innerHTML=`<div class="metric-container"><div class="metric-value">${t.value||'0'}</div></div>`;
     else bd.innerHTML=`<div style="height:100%; display:flex; align-items:center; justify-content:center; color:var(--ink4); font-size:0.7rem; font-style:italic;">Empty</div>`;
   }
 }
@@ -569,6 +552,7 @@ function buildTileForms(side, tiles){
             <option value="none">Empty</option>
             <option value="notes">Notes</option>
             <option value="image">Image Upload</option>
+            <option value="metric">Metric Card</option>
         </select>
         <div id="tf-${side}-f-${i}" style="display:flex; flex-direction:column; gap:8px;"></div>`;
     w.appendChild(b); document.getElementById(`tf-${side}-y-${i}`).value=t.type; toggleTFields(side, i, t);
@@ -577,6 +561,7 @@ function buildTileForms(side, tiles){
 function toggleTFields(side, i, pre){
   const y=document.getElementById(`tf-${side}-y-${i}`).value; const f=document.getElementById(`tf-${side}-f-${i}`); f.innerHTML='';
   if(y==='notes')f.innerHTML=`<textarea class="form-textarea" id="tf-${side}-n-${i}" rows="2">${pre?.notes||''}</textarea>`;
+  if(y==='metric')f.innerHTML=`<input type="text" class="form-input" id="tf-${side}-v-${i}" placeholder="Enter Value (e.g. 98%)" value="${pre?.value||''}">`;
   if(y==='image')f.innerHTML=`
     <div class="file-upload-wrap">
         <input type="file" class="file-upload-input" accept="image/*" onchange="handleFileUpload(this, '${side}', ${i})" data-base64="${pre?.imageUrl || ''}">
@@ -631,6 +616,7 @@ async function saveModal(){
         res.push({
             type, title:document.getElementById(`tf-${side}-t-${i}`).value,
             notes:document.getElementById(`tf-${side}-n-${i}`)?.value,
+            value:document.getElementById(`tf-${side}-v-${i}`)?.value,
             imageUrl:imgEl ? imgEl.dataset.base64 : ''
         });
     }
