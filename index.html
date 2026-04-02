@@ -272,8 +272,23 @@ async function loadFromSheet(){
   try{
     const res=await fetch(`${SHEET_URL}?action=read`);
     const json=await res.json();
-    if(json.ok){deptData=json.data;saveLocal();setSyncStatus('ok',`Synced: ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`);refreshAllSlots();updateAlbumLabel();}
+    if(json.ok){
+      deptData=json.data;
+      saveLocal();
+      setSyncStatus('ok',`Synced: ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`);
+      // Fully rebuild all card content
+      buildCoverflow();
+      refreshAllSlots();
+      positionSlots(false);
+      buildDots();
+      updateAlbumLabel();
+    }
   }catch(err){setSyncStatus('error','Offline');loadLocal();}
+}
+function saveIdx(){ sessionStorage.setItem('novus_mtg_idx', currentIdx); }
+function loadIdx(){ 
+  const saved = sessionStorage.getItem('novus_mtg_idx'); 
+  if(saved !== null) currentIdx = Math.min(parseInt(saved), DEPARTMENTS.length - 1); 
 }
 async function saveToSheet(dept) {
   saveLocal();
@@ -316,6 +331,7 @@ let eyebrow='';
 async function init(){
   eyebrow=new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
   if(!loadLocal())seed();
+  loadIdx();
   buildCoverflow();refreshAllSlots();positionSlots(false);buildDots();updateAlbumLabel();
   await loadFromSheet();
 }
@@ -437,9 +453,15 @@ function _setChrome(show){
 function navigate(dir){
   if(isFullscreen || _animating) return;
   const n=currentIdx+dir;
-  if(n>=0 && n<DEPARTMENTS.length){currentIdx=n;positionSlots(true);buildDots();updateAlbumLabel();}
+  if(n>=0 && n<DEPARTMENTS.length){
+    currentIdx=n;
+    saveIdx();
+    positionSlots(true);
+    buildDots();
+    updateAlbumLabel();
+  }
 }
-
+  
 function refreshAllSlots(){DEPARTMENTS.forEach((_,i)=>refreshSlotData(i));}
 function refreshSlotData(i){
   const d=deptData[DEPARTMENTS[i]]||{};
@@ -494,7 +516,8 @@ function buildDots(){
   const nav=document.getElementById('dots-nav');nav.innerHTML='';
   DEPARTMENTS.forEach((_,i)=>{
     const d=document.createElement('div');d.className='dept-dot'+(i===currentIdx?' active':'');
-    d.onclick=()=>navigate(i-currentIdx);nav.appendChild(d);
+    d.onclick=()=>{ navigate(i-currentIdx); };
+    nav.appendChild(d);
   });
 }
 function updateAlbumLabel(){
