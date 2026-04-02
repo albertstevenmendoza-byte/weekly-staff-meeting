@@ -278,7 +278,7 @@ async function loadFromSheet(){
 async function saveToSheet(dept) {
   saveLocal();
   setSyncStatus('syncing', 'Saving...');
-  
+
   try {
     const payload = {
       action: 'write',
@@ -286,20 +286,25 @@ async function saveToSheet(dept) {
       data: deptData[dept]
     };
 
-    // We use a simple fetch without no-cors to allow the redirect to work properly
-    // Note: Apps Script always returns a redirect (302) on POST
+    // Use a form POST via a hidden iframe to handle the GAS redirect cleanly
+    // OR use the simpler approach: send as a URL-encoded GET-style call
+    // But the cleanest fix is: use no-cors with text/plain, which GAS CAN parse.
+
     await fetch(SHEET_URL, {
       method: 'POST',
-      mode: 'no-cors', // Keeps it simple for GAS redirects
+      mode: 'no-cors',
       body: JSON.stringify(payload),
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8', 
-      }
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }
     });
 
-    // Since no-cors doesn't allow us to read the response, 
-    // we assume success if no error is thrown
-    setSyncStatus('ok', 'Sync Successful');
+    // Verify the write actually landed by reading back
+    const verify = await fetch(`${SHEET_URL}?action=read`);
+    const json = await verify.json();
+    if (json.ok && json.data[dept]) {
+      setSyncStatus('ok', `Saved: ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`);
+    } else {
+      setSyncStatus('error', 'Write not confirmed');
+    }
   } catch (e) {
     console.error("Save Error:", e);
     setSyncStatus('error', 'Failed');
