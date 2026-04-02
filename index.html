@@ -1,3 +1,5 @@
+--- START OF FILE Paste April 02, 2026 - 10:05AM ---
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -50,9 +52,26 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .stage{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;z-index:20;background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);}
 .coverflow{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:visible;z-index:2;perspective:1800px;transform-style:preserve-3d;}
 
-/* REFLECTION */
-.card-reflection{position:absolute;width:var(--card-w);height:var(--card-h);pointer-events:none;transform-origin:center top;z-index:1;top:50%;}
-.card-reflection-inner{width:100%;height:100%;transform:scaleY(-1);border-radius:var(--radius);overflow:hidden;-webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,.25) 0%,transparent 50%);mask-image:linear-gradient(180deg,rgba(0,0,0,.25) 0%,transparent 50%);}
+/* REFLECTION - FIXED POSITION TO AVOID OVERLAPPING CARDS */
+.card-reflection{
+  position:absolute;
+  width:var(--card-w);
+  height:var(--card-h);
+  pointer-events:none;
+  transform-origin:center top;
+  z-index:1;
+  /* Shifted from top:50% to the bottom edge of the centered card */
+  top:calc(50% + (var(--card-h) / 2) + 2px); 
+}
+.card-reflection-inner{
+  width:100%;
+  height:100%;
+  transform:scaleY(-1);
+  border-radius:var(--radius);
+  overflow:hidden;
+  -webkit-mask-image:linear-gradient(180deg, rgba(0,0,0,0.3) 0%, transparent 45%);
+  mask-image:linear-gradient(180deg, rgba(0,0,0,0.3) 0%, transparent 45%);
+}
 
 #album-label{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);z-index:50;text-align:center;pointer-events:none;transition:opacity .3s;}
 #album-label .al-dept{font-size:1.2rem;font-weight:800;color:var(--ink);letter-spacing:-.01em;}
@@ -276,7 +295,6 @@ async function loadFromSheet(){
       deptData=json.data;
       saveLocal();
       setSyncStatus('ok',`Synced: ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`);
-      // Fully rebuild all card content
       buildCoverflow();
       refreshAllSlots();
       positionSlots(false);
@@ -293,26 +311,14 @@ function loadIdx(){
 async function saveToSheet(dept) {
   saveLocal();
   setSyncStatus('syncing', 'Saving...');
-
   try {
-    const payload = {
-      action: 'write',
-      dept: dept,
-      data: deptData[dept]
-    };
-
-    // Use a form POST via a hidden iframe to handle the GAS redirect cleanly
-    // OR use the simpler approach: send as a URL-encoded GET-style call
-    // But the cleanest fix is: use no-cors with text/plain, which GAS CAN parse.
-
+    const payload = { action: 'write', dept: dept, data: deptData[dept] };
     await fetch(SHEET_URL, {
       method: 'POST',
       mode: 'no-cors',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'text/plain;charset=utf-8' }
     });
-
-    // Verify the write actually landed by reading back
     const verify = await fetch(`${SHEET_URL}?action=read`);
     const json = await verify.json();
     if (json.ok && json.data[dept]) {
@@ -466,13 +472,10 @@ function refreshAllSlots(){DEPARTMENTS.forEach((_,i)=>refreshSlotData(i));}
 function refreshSlotData(i){
   const d=deptData[DEPARTMENTS[i]]||{};
   const slot = slots[i];
-  
-  // Scope item rendering to the actual card, not the reflection clone
   const lwEl = slot.querySelector(`#lw-items-${i}`);
   const twEl = slot.querySelector(`#tw-items-${i}`);
   renderItemsEl(lwEl, d.lwItems);
   renderItemsEl(twEl, d.twItems);
-  
   renderTilesForSlot(i, 'ft', d.frontTiles || []);
   renderTilesForSlot(i, 'bt', d.tiles || []);
   requestAnimationFrame(() => syncReflection(i));
@@ -491,11 +494,6 @@ function renderItemsEl(el, items){
     el.appendChild(r);
   });
 }
-function renderItems(id,items){
-  const el=document.getElementById(id);if(!el)return;el.innerHTML='';
-  if(!items||!items.length){el.innerHTML='<div style="padding:10px; color:var(--ink4); font-size:0.8rem; font-style:italic;">No updates</div>';return;}
-  items.forEach(it=>{const r=document.createElement('div');r.className=`item-row ic-${it.color}`;r.textContent=it.text;el.appendChild(r);});
-}
 function syncReflection(i){
   const inner=document.getElementById(`ref-inner-${i}`);
   const front=document.querySelector(`#flipcard-${i} .face-front`);
@@ -509,21 +507,17 @@ function renderTilesForSlot(si, prefix, tiles){
   for(let i=0; i<count; i++){
     const t = tiles[i] || {type:'none'};
     let bd, hd;
-
     if(prefix === 'ft') {
-        // Find elements within the card (avoids ID collisions with reflection)
         hd = slot.querySelector(`.ft-title-label[data-tile-idx="${i}"]`);
         bd = slot.querySelector(`.ft-body-area[data-tile-idx="${i}"]`);
         if(hd) hd.textContent = t.title || `Data ${i+1}`;
     } else {
-        // Back side tiles are rebuilt dynamically
         const wrap=document.getElementById(`back-tiles-${si}`); if(i===0) wrap.innerHTML='';
         const el=document.createElement('div'); el.className='back-tile';
         el.innerHTML=`<div class="tile-hd"><span class="tile-hd-title">${t.title||`Tile ${TILE_ALPHA[i]}`}</span></div><div class="tile-bd" id="tbd-${si}-${i}"></div>`;
         wrap.appendChild(el);
         bd = document.getElementById(`tbd-${si}-${i}`);
     }
-    
     if(!bd) continue;
     if(t.type==='notes') bd.innerHTML=`<div style="padding:10px; font-size:0.85rem; line-height:1.4; color:var(--ink2); white-space:pre-wrap;">${t.notes||''}</div>`;
     else if(t.type==='image') bd.innerHTML=`<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; padding:5px;"><img src="${t.imageUrl}" style="max-width:100%; max-height:100%; border-radius:6px; object-fit:contain;"></div>`;
@@ -652,7 +646,7 @@ async function saveModal(){
   closeModal();
   refreshSlotData(currentIdx);
   updateAlbumLabel();
-  saveToSheet(DEPARTMENTS[currentIdx]); // fire-and-forget, no await needed for UI
+  saveToSheet(DEPARTMENTS[currentIdx]);
 }
 function closeModal(){document.getElementById('modal-overlay').style.display='none';}
 
