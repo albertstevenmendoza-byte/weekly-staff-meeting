@@ -465,12 +465,31 @@ function navigate(dir){
 function refreshAllSlots(){DEPARTMENTS.forEach((_,i)=>refreshSlotData(i));}
 function refreshSlotData(i){
   const d=deptData[DEPARTMENTS[i]]||{};
-  renderItems(`lw-items-${i}`,d.lwItems);
-  renderItems(`tw-items-${i}`,d.twItems);
+  const slot = slots[i];
+  
+  // Scope item rendering to the actual card, not the reflection clone
+  const lwEl = slot.querySelector(`#lw-items-${i}`);
+  const twEl = slot.querySelector(`#tw-items-${i}`);
+  renderItemsEl(lwEl, d.lwItems);
+  renderItemsEl(twEl, d.twItems);
+  
   renderTilesForSlot(i, 'ft', d.frontTiles || []);
   renderTilesForSlot(i, 'bt', d.tiles || []);
-  // Re-sync reflection AFTER all content is updated
   requestAnimationFrame(() => syncReflection(i));
+}
+function renderItemsEl(el, items){
+  if(!el) return;
+  el.innerHTML='';
+  if(!items || !items.length){
+    el.innerHTML='<div style="padding:10px; color:var(--ink4); font-size:0.8rem; font-style:italic;">No updates</div>';
+    return;
+  }
+  items.forEach(it=>{
+    const r=document.createElement('div');
+    r.className=`item-row ic-${it.color}`;
+    r.textContent=it.text;
+    el.appendChild(r);
+  });
 }
 function renderItems(id,items){
   const el=document.getElementById(id);if(!el)return;el.innerHTML='';
