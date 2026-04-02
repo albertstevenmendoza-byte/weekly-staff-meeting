@@ -232,7 +232,8 @@ body{
   height:42%;border-top:1px solid var(--border);
   background:var(--border);gap:1px;flex-shrink:0;
 }
-.front-tile{background:var(--surface);display:flex;flex-direction:column;overflow:hidden;}
+.front-tile{background:var(--surface);display:flex;flex-direction:column;overflow:hidden;transition:background .15s;}
+.front-tile[style*="cursor"]:hover,.back-tile[style*="cursor"]:hover{background:var(--bg2);}
 
 /* ── FOOTER ── */
 .front-footer{
@@ -450,6 +451,43 @@ body{
   background:var(--surface);border:1px solid var(--border);
   border-radius:5px;padding:3px 7px;color:var(--ink3);
 }
+
+/* ── TILE ZOOM OVERLAY ── */
+#tile-zoom-scrim{
+  display:none;position:fixed;inset:0;z-index:400;
+  background:rgba(10,16,30,.88);backdrop-filter:blur(10px);
+  opacity:0;transition:opacity .3s var(--ease);
+  cursor:pointer;
+}
+#tile-zoom-scrim.active{display:block;}
+#tile-zoom-scrim.visible{opacity:1;}
+
+#tile-zoom-container{
+  position:fixed;z-index:410;
+  background:var(--surface);border-radius:16px;
+  box-shadow:0 30px 80px rgba(0,0,0,.3);
+  overflow:hidden;display:flex;flex-direction:column;
+  transition:top .4s var(--ease),left .4s var(--ease),width .4s var(--ease),height .4s var(--ease),opacity .3s var(--ease);
+  opacity:0;pointer-events:none;
+}
+#tile-zoom-container.active{opacity:1;pointer-events:auto;}
+
+#tile-zoom-head{
+  padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+#tile-zoom-title{
+  font-size:.75rem;font-weight:800;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--ink2);
+}
+#tile-zoom-close{
+  width:28px;height:28px;border-radius:50%;border:1px solid var(--border);
+  background:var(--surface);color:var(--ink3);font-size:.9rem;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .15s;
+}
+#tile-zoom-close:hover{background:var(--red-ll);color:var(--red);border-color:var(--red);}
+#tile-zoom-body{flex:1;overflow:auto;min-height:0;}
 </style>
 </head>
 <body>
@@ -497,6 +535,15 @@ body{
 </div>
 
 <div class="toast-container" id="toast-container"></div>
+
+<div id="tile-zoom-scrim"></div>
+<div id="tile-zoom-container">
+  <div id="tile-zoom-head">
+    <span id="tile-zoom-title"></span>
+    <button id="tile-zoom-close">✕</button>
+  </div>
+  <div id="tile-zoom-body"></div>
+</div>
 
 <div id="modal-overlay">
   <div id="modal">
@@ -939,10 +986,11 @@ function renderTilesForSlot(si, prefix, tiles) {
 
   for (let i = 0; i < count; i++) {
     const t = tiles[i] || {type:'none'};
-    let bd, hd;
+    let bd, hd, tileParent;
     if (prefix === 'ft') {
       hd = slot.querySelector(`.ft-title-label[data-tile-idx="${i}"]`);
       bd = slot.querySelector(`.ft-body-area[data-tile-idx="${i}"]`);
+      tileParent = bd?.closest('.front-tile');
       if (hd) hd.textContent = t.title || `Data ${i+1}`;
     } else {
       const wrap = document.getElementById(`back-tiles-${si}`);
@@ -951,9 +999,15 @@ function renderTilesForSlot(si, prefix, tiles) {
       el.innerHTML = `<div class="tile-hd"><span class="tile-hd-title">${t.title || `Tile ${TILE_ALPHA[i]}`}</span></div><div class="tile-bd" id="tbd-${si}-${i}"></div>`;
       wrap.appendChild(el);
       bd = document.getElementById(`tbd-${si}-${i}`);
+      tileParent = el;
     }
     if (!bd) continue;
     renderTileContent(bd, t);
+    // Attach zoom click if tile has content
+    if (t.type && t.type !== 'none' && tileParent) {
+      tileParent.style.cursor = 'pointer';
+      tileParent.onclick = (e) => { e.stopPropagation(); openTileZoom(tileParent); };
+    }
   }
 }
 
@@ -1214,6 +1268,109 @@ document.addEventListener('keydown', (e) => {
   // Space to toggle timer
   if (e.key === ' ' && !isFullscreen) { e.preventDefault(); timerToggle(); }
 });
+
+/* ══════════════════════════════════════════
+   TILE ZOOM
+   ══════════════════════════════════════════ */
+let _tileZoomed = false, _tileZoomRect = null;
+
+const _zScrim = document.getElementById('tile-zoom-scrim');
+const _zContainer = document.getElementById('tile-zoom-container');
+const _zTitle = document.getElementById('tile-zoom-title');
+const _zBody = document.getElementById('tile-zoom-body');
+const _zClose = document.getElementById('tile-zoom-close');
+
+function openTileZoom(tileEl) {
+  if (_tileZoomed) return;
+  _tileZoomed = true;
+
+  // Grab the tile's title and body content
+  const titleEl = tileEl.querySelector('.tile-hd-title, .ft-title-label');
+  const bodyEl = tileEl.querySelector('.tile-bd, .ft-body-area');
+  if (!bodyEl) return;
+
+  const title = titleEl ? titleEl.textContent : 'Tile';
+  const bodyHTML = bodyEl.innerHTML;
+
+  _zTitle.textContent = title;
+  _zBody.innerHTML = bodyHTML;
+
+  // Style zoomed images to fill the space
+  _zBody.querySelectorAll('img').forEach(img => {
+    img.style.maxWidth = '100%';
+    img.style.maxHeight = '100%';
+    img.style.objectFit = 'contain';
+  });
+  // Style zoomed notes to be larger
+  _zBody.querySelectorAll('div').forEach(d => {
+    if (d.style.fontSize) d.style.fontSize = '1.1rem';
+  });
+  // Style zoomed metrics larger
+  _zBody.querySelectorAll('.metric-value').forEach(m => {
+    m.style.fontSize = '5rem';
+  });
+
+  // Animate from tile position to center
+  const rect = tileEl.getBoundingClientRect();
+  _tileZoomRect = rect;
+
+  _zContainer.style.transition = 'none';
+  _zContainer.style.top = rect.top + 'px';
+  _zContainer.style.left = rect.left + 'px';
+  _zContainer.style.width = rect.width + 'px';
+  _zContainer.style.height = rect.height + 'px';
+  _zContainer.classList.add('active');
+
+  _zScrim.classList.add('active');
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      _zScrim.classList.add('visible');
+      // Expand to center
+      const targetW = Math.min(700, window.innerWidth * 0.75);
+      const targetH = Math.min(520, window.innerHeight * 0.7);
+      const targetX = (window.innerWidth - targetW) / 2;
+      const targetY = (window.innerHeight - targetH) / 2;
+
+      _zContainer.style.transition = 'top .4s var(--ease), left .4s var(--ease), width .4s var(--ease), height .4s var(--ease)';
+      _zContainer.style.top = targetY + 'px';
+      _zContainer.style.left = targetX + 'px';
+      _zContainer.style.width = targetW + 'px';
+      _zContainer.style.height = targetH + 'px';
+    });
+  });
+}
+
+function closeTileZoom() {
+  if (!_tileZoomed) return;
+
+  // Animate back to original position
+  if (_tileZoomRect) {
+    _zContainer.style.transition = 'top .35s var(--ease), left .35s var(--ease), width .35s var(--ease), height .35s var(--ease), opacity .3s var(--ease)';
+    _zContainer.style.top = _tileZoomRect.top + 'px';
+    _zContainer.style.left = _tileZoomRect.left + 'px';
+    _zContainer.style.width = _tileZoomRect.width + 'px';
+    _zContainer.style.height = _tileZoomRect.height + 'px';
+  }
+
+  _zScrim.classList.remove('visible');
+
+  setTimeout(() => {
+    _zContainer.classList.remove('active');
+    _zScrim.classList.remove('active');
+    _zContainer.style.transition = '';
+    _zBody.innerHTML = '';
+    _tileZoomed = false;
+    _tileZoomRect = null;
+  }, 380);
+}
+
+_zScrim.addEventListener('click', closeTileZoom);
+_zClose.addEventListener('click', closeTileZoom);
+
+// Patch Escape key to also close tile zoom
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && _tileZoomed) { closeTileZoom(); e.stopPropagation(); }
+}, true);
 
 // Handle window resize — recalculate positions
 let _resizeTimer;
