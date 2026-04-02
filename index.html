@@ -1,3 +1,5 @@
+--- START OF FILE Paste April 02, 2026 - 2:14PM ---
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -253,7 +255,27 @@ body{
   font-size:.62rem;font-weight:800;text-transform:uppercase;
   letter-spacing:.08em;color:var(--ink2);text-align:center;
 }
-.tile-bd{flex:1;overflow:hidden;position:relative;min-height:0;}
+.tile-bd{flex:1;overflow:hidden;position:relative;min-height:0;display:flex;flex-direction:column;}
+
+/* ── NOTES ENHANCEMENTS ── */
+.notes-container {
+  padding: 16px;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.5;
+  color: var(--ink);
+  font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(37,99,235,0.03) 100%);
+}
+.notes-container::-webkit-scrollbar{width:4px;}
+.notes-container::-webkit-scrollbar-track{background:transparent;}
+.notes-container::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 
 /* ── BACK ── */
 .back-tiles{
@@ -268,7 +290,7 @@ body{
   flex-direction:column;padding:10px;
 }
 .metric-value{
-  font-size:3rem;font-weight:800;color:var(--blue);
+  font-size:3.5rem;font-weight:800;color:var(--blue);
   letter-spacing:-0.04em;line-height:1;
 }
 
@@ -1013,7 +1035,16 @@ function renderTilesForSlot(si, prefix, tiles) {
 
 function renderTileContent(bd, t) {
   if (t.type === 'notes') {
-    bd.innerHTML = `<div style="padding:10px;font-size:.82rem;line-height:1.4;color:var(--ink2);white-space:pre-wrap;">${escHtml(t.notes || '')}</div>`;
+    const text = t.notes || '';
+    // Smart Font Sizing based on character count
+    let fontSize = '1.05rem';
+    if (text.length < 50) fontSize = '1.6rem';
+    else if (text.length < 120) fontSize = '1.25rem';
+    
+    bd.innerHTML = `
+      <div class="notes-container" style="font-size: ${fontSize}; justify-content: ${text.length < 80 ? 'center' : 'flex-start'};">
+        ${escHtml(text)}
+      </div>`;
   } else if (t.type === 'image') {
     bd.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;"><img src="${t.imageUrl}" style="max-width:100%;max-height:100%;object-fit:contain;" onerror="this.parentElement.innerHTML='<span style=\\'color:var(--ink4);font-size:.7rem;\\'>Image failed</span>'"></div>`;
   } else if (t.type === 'metric') {
@@ -1301,13 +1332,18 @@ function openTileZoom(tileEl) {
     img.style.maxHeight = '100%';
     img.style.objectFit = 'contain';
   });
-  // Style zoomed notes to be larger
-  _zBody.querySelectorAll('div').forEach(d => {
-    if (d.style.fontSize) d.style.fontSize = '1.1rem';
+  
+  // Style zoomed notes to be much larger for reading
+  _zBody.querySelectorAll('.notes-container').forEach(d => {
+    d.style.fontSize = '2.2rem';
+    d.style.padding = '40px';
+    d.style.justifyContent = 'center';
+    d.style.textAlign = 'center';
   });
+  
   // Style zoomed metrics larger
   _zBody.querySelectorAll('.metric-value').forEach(m => {
-    m.style.fontSize = '5rem';
+    m.style.fontSize = '6rem';
   });
 
   // Animate from tile position to center
@@ -1326,8 +1362,8 @@ function openTileZoom(tileEl) {
     requestAnimationFrame(() => {
       _zScrim.classList.add('visible');
       // Expand to center
-      const targetW = Math.min(700, window.innerWidth * 0.75);
-      const targetH = Math.min(520, window.innerHeight * 0.7);
+      const targetW = Math.min(800, window.innerWidth * 0.85);
+      const targetH = Math.min(600, window.innerHeight * 0.75);
       const targetX = (window.innerWidth - targetW) / 2;
       const targetY = (window.innerHeight - targetH) / 2;
 
