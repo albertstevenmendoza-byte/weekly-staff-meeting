@@ -87,7 +87,7 @@ body{
   perspective:2000px;transform-style:preserve-3d;
 }
 
-/* ── REFLECTION ── */
+/* ── REFLECTION (desktop only) ── */
 .card-reflection{
   position:absolute;width:var(--card-w);height:var(--card-h);
   pointer-events:none;transform-origin:center top;z-index:1;
@@ -98,6 +98,10 @@ body{
   border-radius:var(--radius);overflow:hidden;
   -webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,.25) 0%,transparent 40%);
   mask-image:linear-gradient(180deg,rgba(0,0,0,.25) 0%,transparent 40%);
+}
+/* Hide reflections on mobile/tablet for performance */
+@media (max-width: 1024px) {
+  .card-reflection { display: none !important; }
 }
 
 /* ── ALBUM LABEL ── */
@@ -455,6 +459,13 @@ body{
 .file-upload-text{font-size:.72rem;color:var(--ink3);font-weight:600;}
 .img-preview-thumb{margin-top:6px;width:100%;height:50px;object-fit:cover;border-radius:5px;display:none;}
 
+/* Image URL indicator for tiles that already have a Drive URL */
+.img-url-indicator{
+  font-size:.65rem;font-family:'DM Mono',monospace;color:var(--green);
+  padding:4px 8px;background:var(--green-ll);border-radius:5px;
+  margin-top:4px;word-break:break-all;
+}
+
 .modal-footer{
   padding:16px 28px;background:var(--bg2);border-top:1px solid var(--border);
   display:flex;justify-content:flex-end;gap:10px;flex-shrink:0;
@@ -626,9 +637,12 @@ body{
 const SHEET_URL = 'https://script.google.com/macros/s/AKfycbxOjN2iXOMU3_UoROBpcivFWomRa1dM3aKk7g-T21757Ujp7K7i7jZBDo8KTZqH9A0tNg/exec';
 const DEPARTMENTS = ['SAP','Production','Finance','QA','Shipping','Receiving','Sanitation','Engineering','Maintenance','Training','HR','Continuous Improvement','Inventory Control'];
 const TILE_ALPHA = ['A','B','C','D'];
-const KEY = 'novus_staffmtg_v5';
+const KEY = 'novus_staffmtg_v6';
 const SYNC_RETRY_MAX = 3;
 const SYNC_RETRY_DELAY = 2000;
+
+// Performance: detect mobile for reflection toggle
+const IS_MOBILE = window.innerWidth <= 1024;
 
 let deptData = {}, currentIdx = 0;
 let isFullscreen = false, _animating = false, _fsCardEl = null, _savedSlotRect = null;
@@ -652,7 +666,36 @@ function toast(msg, type='info', duration=3000) {
 /* ══════════════════════════════════════════
    SYNC ENGINE (with retry + queue)
    ══════════════════════════════════════════ */
-function saveLocal() { localStorage.setItem(KEY, JSON.stringify(deptData)); }
+
+/**
+ * FIX: Strip base64 data from localStorage to prevent hitting the ~5MB cap.
+ * Only Drive URLs (https://...) are kept; raw base64 strings are removed before caching.
+ */
+function stripBase64ForCache(data) {
+  const clone = JSON.parse(JSON.stringify(data));
+  Object.keys(clone).forEach(dept => {
+    const d = clone[dept];
+    ['frontTiles', 'tiles'].forEach(key => {
+      if (Array.isArray(d[key])) {
+        d[key].forEach(tile => {
+          if (tile.imageUrl && tile.imageUrl.startsWith('data:')) {
+            tile.imageUrl = ''; // Strip base64, keep Drive URLs
+          }
+        });
+      }
+    });
+  });
+  return clone;
+}
+
+function saveLocal() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(stripBase64ForCache(deptData)));
+  } catch (e) {
+    console.warn('localStorage save failed (quota?):', e);
+  }
+}
+
 function loadLocal() {
   const r = localStorage.getItem(KEY);
   if (r) { deptData = JSON.parse(r); return true; }
@@ -692,7 +735,6 @@ async function loadFromSheet() {
     const res = await fetchWithRetry(`${SHEET_URL}?action=read`);
     const json = await res.json();
     if (json.ok) {
-      // Merge: keep local edits for depts not in remote
       Object.keys(json.data).forEach(k => deptData[k] = json.data[k]);
       saveLocal();
       setSyncStatus('ok', `Synced ${ts()}`);
@@ -709,7 +751,6 @@ async function loadFromSheet() {
   }
 }
 
-// Queued writes: prevents race conditions when saving multiple depts quickly
 async function enqueueSave(dept) {
   saveLocal();
   _saveQueue.push(dept);
@@ -726,15 +767,35 @@ async function _doSave(dept) {
   setSyncStatus('syncing', 'Saving…');
   try {
     const payload = { action: 'write', dept, data: deptData[dept] };
+    const payloadStr = JSON.stringify(payload);
+
+    // Debug: log payload size and image fields
+    console.log(`[SAVE] ${dept} payload size: ${(payloadStr.length / 1024).toFixed(1)} KB`);
+    const d = deptData[dept];
+    ['frontTiles', 'tiles'].forEach(key => {
+      (d[key] || []).forEach((t, i) => {
+        if (t.type === 'image') {
+          const urlPreview = t.imageUrl ? t.imageUrl.substring(0, 80) : '(empty)';
+          console.log(`[SAVE] ${dept} ${key}[${i}] imageUrl: ${urlPreview}...`);
+        }
+      });
+    });
+
     await fetchWithRetry(SHEET_URL, {
       method: 'POST', mode: 'no-cors',
-      body: JSON.stringify(payload),
+      body: payloadStr,
       headers: { 'Content-Type': 'text/plain;charset=utf-8' }
     });
-    // Verify
+
+    // Lightweight verify: only re-read after a short delay, and only for this dept
+    await new Promise(r => setTimeout(r, 1500));
     const verify = await fetchWithRetry(`${SHEET_URL}?action=read`);
     const json = await verify.json();
     if (json.ok && json.data[dept]) {
+      // Update local data with server response (which has Drive URLs instead of base64)
+      deptData[dept] = json.data[dept];
+      saveLocal();
+      refreshSlotData(DEPARTMENTS.indexOf(dept));
       setSyncStatus('ok', `Saved ${ts()}`);
       toast(`${dept} saved`, 'success', 2000);
     } else {
@@ -783,11 +844,13 @@ function buildCoverflow() {
   track.querySelectorAll('.card-slot,.card-reflection').forEach(el => el.remove());
   slots.length = 0;
   DEPARTMENTS.forEach((dept, i) => {
-    // Reflection
-    const ref = document.createElement('div');
-    ref.className = 'card-reflection'; ref.id = `ref-${i}`;
-    ref.innerHTML = `<div class="card-reflection-inner" id="ref-inner-${i}"></div>`;
-    track.appendChild(ref);
+    // Reflection (desktop only)
+    if (!IS_MOBILE) {
+      const ref = document.createElement('div');
+      ref.className = 'card-reflection'; ref.id = `ref-${i}`;
+      ref.innerHTML = `<div class="card-reflection-inner" id="ref-inner-${i}"></div>`;
+      track.appendChild(ref);
+    }
     // Slot
     const slot = document.createElement('div');
     slot.className = 'card-slot'; slot.dataset.idx = i;
@@ -840,11 +903,12 @@ function positionSlots(animate) {
   slots.forEach((slot, i) => {
     const diff = i - currentIdx;
     const absDiff = Math.abs(diff);
-    // Smoother falloff: visible up to ±3
     if (absDiff > 3) {
       slot.style.cssText = 'opacity:0;pointer-events:none;transform:translateX(0) scale(0.5);';
-      const ref = document.getElementById(`ref-${i}`);
-      if (ref) ref.style.cssText = 'opacity:0;';
+      if (!IS_MOBILE) {
+        const ref = document.getElementById(`ref-${i}`);
+        if (ref) ref.style.cssText = 'opacity:0;';
+      }
       return;
     }
     let tx = diff * cw * 0.55;
@@ -861,12 +925,14 @@ function positionSlots(animate) {
       opacity: ${op}; z-index: ${zi};
       pointer-events: ${absDiff > 1 ? 'none' : 'auto'};
     `;
-    const ref = document.getElementById(`ref-${i}`);
-    if (ref) ref.style.cssText = `
-      transition: transform ${dur} var(--ease), opacity ${dur} var(--ease);
-      transform: translateX(${tx}px) scale(${scale}) rotateY(${ry}deg);
-      opacity: ${op * 0.2};
-    `;
+    if (!IS_MOBILE) {
+      const ref = document.getElementById(`ref-${i}`);
+      if (ref) ref.style.cssText = `
+        transition: transform ${dur} var(--ease), opacity ${dur} var(--ease);
+        transform: translateX(${tx}px) scale(${scale}) rotateY(${ry}deg);
+        opacity: ${op * 0.2};
+      `;
+    }
   });
 }
 
@@ -897,7 +963,7 @@ function _expandToFullscreen(fc) {
     transition: none;
   `;
   document.body.appendChild(fc);
-  fc.offsetHeight; // force reflow
+  fc.offsetHeight;
   fc.style.transition = 'top .45s var(--ease), left .45s var(--ease), width .45s var(--ease), height .45s var(--ease)';
   fc.style.top = '0px'; fc.style.left = '0px';
   fc.style.width = '100vw'; fc.style.height = '100vh';
@@ -974,7 +1040,10 @@ function refreshSlotData(i) {
   renderItemsEl(slot.querySelector(`#tw-items-${i}`), d.twItems);
   renderTilesForSlot(i, 'ft', d.frontTiles || []);
   renderTilesForSlot(i, 'bt', d.tiles || []);
-  requestAnimationFrame(() => syncReflection(i));
+  // Only sync reflections on desktop and for nearby cards
+  if (!IS_MOBILE && Math.abs(i - currentIdx) <= 2) {
+    requestAnimationFrame(() => syncReflection(i));
+  }
 }
 
 function renderItemsEl(el, items) {
@@ -1023,7 +1092,6 @@ function renderTilesForSlot(si, prefix, tiles) {
     }
     if (!bd) continue;
     renderTileContent(bd, t);
-    // Attach zoom click if tile has content
     if (t.type && t.type !== 'none' && tileParent) {
       tileParent.style.cursor = 'pointer';
       tileParent.onclick = (e) => { e.stopPropagation(); openTileZoom(tileParent); };
@@ -1034,7 +1102,6 @@ function renderTilesForSlot(si, prefix, tiles) {
 function renderTileContent(bd, t) {
   if (t.type === 'notes') {
     const text = t.notes || '';
-    // Smart Font Sizing based on character count
     let fontSize = '1.05rem';
     if (text.length < 50) fontSize = '1.6rem';
     else if (text.length < 120) fontSize = '1.25rem';
@@ -1076,6 +1143,11 @@ function updateAlbumLabel() {
 /* ══════════════════════════════════════════
    EDIT MODAL (tabbed)
    ══════════════════════════════════════════ */
+
+// FIX: Store a snapshot of the current dept data when the modal opens,
+// so we can preserve existing imageUrls through the modal rebuild cycle.
+let _modalSnapshot = null;
+
 function switchTab(btn) {
   document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.modal-tab-panel').forEach(p => p.classList.remove('active'));
@@ -1086,8 +1158,11 @@ function switchTab(btn) {
 function openEditModal() {
   const dept = DEPARTMENTS[currentIdx];
   const d = deptData[dept] || {};
+
+  // FIX: Deep-clone the current data so tile forms can reference existing URLs
+  _modalSnapshot = JSON.parse(JSON.stringify(d));
+
   document.getElementById('modal-title').textContent = `Edit: ${dept}`;
-  // Reset to first tab
   document.querySelector('.modal-tab').click();
 
   const build = (id, items) => {
@@ -1117,7 +1192,6 @@ function addItemRow(side, txt = '', clr = 'none') {
     <button style="border:none;background:transparent;cursor:pointer;color:var(--red);font-size:1rem;padding:0 4px;" onclick="this.parentElement.remove()" title="Remove">✕</button>
   `;
   w.appendChild(r);
-  // Focus the new input if empty
   if (!txt) r.querySelector('input').focus();
 }
 
@@ -1146,22 +1220,51 @@ function buildTileForms(side, tiles) {
   }
 }
 
+/**
+ * FIX: toggleTFields now correctly handles existing image URLs.
+ * When called without `pre` (from onchange), it looks up the snapshot
+ * to preserve existing imageUrl data.
+ */
 function toggleTFields(side, i, pre) {
   const y = document.getElementById(`tf-${side}-y-${i}`).value;
   const f = document.getElementById(`tf-${side}-f-${i}`); f.innerHTML = '';
+
+  // If no pre data provided (user just changed the dropdown), try to recover
+  // the existing tile data from the snapshot
+  if (!pre && _modalSnapshot) {
+    const tileArray = (side === 'front') ? _modalSnapshot.frontTiles : _modalSnapshot.tiles;
+    if (tileArray && tileArray[i] && tileArray[i].type === y) {
+      pre = tileArray[i];
+    }
+  }
+  if (!pre) pre = {};
+
   if (y === 'notes') {
-    f.innerHTML = `<textarea class="form-textarea" id="tf-${side}-n-${i}" placeholder="Notes content…">${pre?.notes||''}</textarea>`;
+    f.innerHTML = `<textarea class="form-textarea" id="tf-${side}-n-${i}" placeholder="Notes content…">${pre.notes||''}</textarea>`;
   }
   if (y === 'metric') {
-    f.innerHTML = `<input type="text" class="form-input" id="tf-${side}-v-${i}" placeholder="e.g. 98%" value="${escAttr(pre?.value||'')}">`;
+    f.innerHTML = `<input type="text" class="form-input" id="tf-${side}-v-${i}" placeholder="e.g. 98%" value="${escAttr(pre.value||'')}">`;
   }
   if (y === 'image') {
+    const existingUrl = pre.imageUrl || '';
+    const isDriveUrl = existingUrl && !existingUrl.startsWith('data:');
+    const hasImage = !!existingUrl;
+
+    let urlIndicator = '';
+    if (isDriveUrl) {
+      urlIndicator = `<div class="img-url-indicator">✓ Saved to Drive</div>`;
+    }
+
     f.innerHTML = `
       <div class="file-upload-wrap">
-        <input type="file" class="file-upload-input" accept="image/*" onchange="handleFileUpload(this,'${side}',${i})" data-base64="${pre?.imageUrl||''}">
-        <div class="file-upload-text">${pre?.imageUrl ? '✓ Change Image' : 'Drop or click to upload'}</div>
-        <img id="img-prev-${side}-${i}" class="img-preview-thumb" src="${pre?.imageUrl||''}" style="${pre?.imageUrl ? 'display:block' : ''}">
-      </div>`;
+        <input type="file" class="file-upload-input" accept="image/*"
+               onchange="handleFileUpload(this,'${side}',${i})"
+               data-base64="${escAttr(existingUrl)}"
+               data-existing-url="${escAttr(existingUrl)}">
+        <div class="file-upload-text">${hasImage ? '✓ Change Image' : 'Drop or click to upload'}</div>
+        <img id="img-prev-${side}-${i}" class="img-preview-thumb" src="${existingUrl}" style="${hasImage ? 'display:block' : ''}">
+      </div>
+      ${urlIndicator}`;
   }
 }
 
@@ -1176,9 +1279,14 @@ async function handleFileUpload(input, prefix, index) {
     try {
       const compressed = await compressImage(e.target.result, 800, 0.7);
       input.dataset.base64 = compressed;
+      // Clear the existing URL since user is uploading a new image
+      input.dataset.existingUrl = '';
       preview.src = compressed;
       preview.style.display = 'block';
-      textLabel.textContent = '✓ Image ready';
+      textLabel.textContent = '✓ Image ready (new upload)';
+      // Remove the Drive indicator if present
+      const indicator = input.closest('.file-upload-wrap')?.parentElement?.querySelector('.img-url-indicator');
+      if (indicator) indicator.remove();
     } catch (err) {
       textLabel.textContent = 'Error — try again';
     }
@@ -1204,6 +1312,12 @@ function compressImage(base64Str, maxWidth, quality) {
   });
 }
 
+/**
+ * FIX: getTiles now correctly resolves imageUrl from multiple sources:
+ * 1. New upload (base64 in dataset.base64)
+ * 2. Existing Drive URL (in dataset.existingUrl, preserved from data load)
+ * 3. Fallback empty string
+ */
 async function saveModal() {
   const btn = document.getElementById('save-btn');
   btn.textContent = 'Saving…'; btn.disabled = true;
@@ -1216,17 +1330,39 @@ async function saveModal() {
     });
     return res;
   };
+
   const getTiles = (side, count) => {
     const res = [];
     for (let i = 0; i < count; i++) {
       const type = document.getElementById(`tf-${side}-y-${i}`).value;
-      const imgEl = document.querySelector(`#tf-${side}-f-${i} input[type="file"]`);
+
+      // FIX: Resolve image URL from the correct source
+      let imageUrl = '';
+      if (type === 'image') {
+        const imgEl = document.querySelector(`#tf-${side}-f-${i} input[type="file"]`);
+        if (imgEl) {
+          // Priority: new upload base64 > existing Drive URL > empty
+          const newBase64 = imgEl.dataset.base64 || '';
+          const existingUrl = imgEl.dataset.existingUrl || '';
+
+          if (newBase64 && newBase64.startsWith('data:')) {
+            imageUrl = newBase64; // New upload, will be converted to Drive URL by Apps Script
+          } else if (existingUrl && !existingUrl.startsWith('data:')) {
+            imageUrl = existingUrl; // Existing Drive URL, keep it
+          } else if (newBase64) {
+            imageUrl = newBase64; // Fallback to whatever is in base64
+          }
+
+          console.log(`[SAVE-TILE] ${side}[${i}] resolved imageUrl: ${imageUrl.substring(0, 80)}...`);
+        }
+      }
+
       res.push({
         type,
         title: document.getElementById(`tf-${side}-t-${i}`).value,
-        notes: document.getElementById(`tf-${side}-n-${i}`)?.value,
-        value: document.getElementById(`tf-${side}-v-${i}`)?.value,
-        imageUrl: imgEl ? imgEl.dataset.base64 : ''
+        notes: document.getElementById(`tf-${side}-n-${i}`)?.value || undefined,
+        value: document.getElementById(`tf-${side}-v-${i}`)?.value || undefined,
+        imageUrl: imageUrl || undefined
       });
     }
     return res;
@@ -1238,14 +1374,19 @@ async function saveModal() {
     frontTiles: getTiles('front', 2),
     tiles: getTiles('back', 4)
   };
+
   closeModal();
+  _modalSnapshot = null;
   refreshSlotData(currentIdx);
   updateAlbumLabel();
   await enqueueSave(dept);
   btn.textContent = 'Save & Sync'; btn.disabled = false;
 }
 
-function closeModal() { document.getElementById('modal-overlay').classList.remove('active'); }
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('active');
+  _modalSnapshot = null;
+}
 
 /* ══════════════════════════════════════════
    TIMER (with visual warnings)
@@ -1284,7 +1425,6 @@ function updateTDisp() {
    KEYBOARD (TV-friendly)
    ══════════════════════════════════════════ */
 document.addEventListener('keydown', (e) => {
-  // Don't capture when typing in inputs
   if (e.target.matches('input,textarea,select')) return;
 
   if (e.key === 'Escape') {
@@ -1294,7 +1434,6 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight') navigate(1);
   if (e.key === 'ArrowLeft') navigate(-1);
   if (e.key === 'Enter' && !isFullscreen) startFlipAndExpand();
-  // Space to toggle timer
   if (e.key === ' ' && !isFullscreen) { e.preventDefault(); timerToggle(); }
 });
 
@@ -1313,7 +1452,6 @@ function openTileZoom(tileEl) {
   if (_tileZoomed) return;
   _tileZoomed = true;
 
-  // Grab the tile's title and body content
   const titleEl = tileEl.querySelector('.tile-hd-title, .ft-title-label');
   const bodyEl = tileEl.querySelector('.tile-bd, .ft-body-area');
   if (!bodyEl) return;
@@ -1324,14 +1462,12 @@ function openTileZoom(tileEl) {
   _zTitle.textContent = title;
   _zBody.innerHTML = bodyHTML;
 
-  // Style zoomed images to fill the space
   _zBody.querySelectorAll('img').forEach(img => {
     img.style.maxWidth = '100%';
     img.style.maxHeight = '100%';
     img.style.objectFit = 'contain';
   });
   
-  // Style zoomed notes to be much larger for reading
   _zBody.querySelectorAll('.notes-container').forEach(d => {
     d.style.fontSize = '2.2rem';
     d.style.padding = '40px';
@@ -1339,12 +1475,10 @@ function openTileZoom(tileEl) {
     d.style.textAlign = 'center';
   });
   
-  // Style zoomed metrics larger
   _zBody.querySelectorAll('.metric-value').forEach(m => {
     m.style.fontSize = '6rem';
   });
 
-  // Animate from tile position to center
   const rect = tileEl.getBoundingClientRect();
   _tileZoomRect = rect;
 
@@ -1359,7 +1493,6 @@ function openTileZoom(tileEl) {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       _zScrim.classList.add('visible');
-      // Expand to center
       const targetW = Math.min(800, window.innerWidth * 0.85);
       const targetH = Math.min(600, window.innerHeight * 0.75);
       const targetX = (window.innerWidth - targetW) / 2;
@@ -1377,7 +1510,6 @@ function openTileZoom(tileEl) {
 function closeTileZoom() {
   if (!_tileZoomed) return;
 
-  // Animate back to original position
   if (_tileZoomRect) {
     _zContainer.style.transition = 'top .35s var(--ease), left .35s var(--ease), width .35s var(--ease), height .35s var(--ease), opacity .3s var(--ease)';
     _zContainer.style.top = _tileZoomRect.top + 'px';
@@ -1401,21 +1533,20 @@ function closeTileZoom() {
 _zScrim.addEventListener('click', closeTileZoom);
 _zClose.addEventListener('click', closeTileZoom);
 
-// Patch Escape key to also close tile zoom
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && _tileZoomed) { closeTileZoom(); e.stopPropagation(); }
 }, true);
 
-// Handle window resize — recalculate positions
+// Debounced resize handler
 let _resizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(_resizeTimer);
   _resizeTimer = setTimeout(() => {
     if (!isFullscreen) positionSlots(false);
-  }, 150);
+  }, 200);
 });
 
-// Touch/swipe support for TV remote trackpads
+// Touch/swipe support
 let _touchStartX = 0;
 document.addEventListener('touchstart', (e) => { _touchStartX = e.touches[0].clientX; }, {passive:true});
 document.addEventListener('touchend', (e) => {
