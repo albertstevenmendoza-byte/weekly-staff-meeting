@@ -541,37 +541,43 @@ async function enqueueSave(dept){
 }
   
 async function _doSave(dept) {
-  setSyncStatus('syncing', 'Saving…');
+  setSyncStatus('syncing', 'Uploading Media...');
   try {
-    const payload = { action: 'write', dept: dept, data: deptData[dept] };
-    const payloadStr = JSON.stringify(payload);
+    const payload = { 
+      action: 'write', 
+      dept: dept, 
+      data: deptData[dept] 
+    };
 
     const response = await fetch(SHEET_URL, {
       method: 'POST',
-      body: payloadStr,
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+      mode: 'cors', // Explicitly allow cross-origin
+      body: JSON.stringify(payload)
     });
 
     const result = await response.json();
 
     if (result.ok && result.data) {
-      // THIS IS THE CRITICAL PART: 
-      // Update the main data object with the Drive URLs returned by Google
+      // 1. Overwrite our local data with the Drive URLs from Google
       deptData[dept] = result.data; 
+      
+      // 2. Commit to Browser Storage
       saveLocal(); 
-      refreshSlotData(DEPARTMENTS.indexOf(dept));
       
-      setSyncStatus('ok', `Saved ${ts()}`);
-      toast(`${dept} updated with images!`, 'success', 2000);
+      // 3. Force the Card to re-draw immediately
+      const idx = DEPARTMENTS.indexOf(dept);
+      refreshSlotData(idx);
       
-      return result.data; // Added this return
+      setSyncStatus('ok', `Synced ${ts()}`);
+      toast(`Success: ${dept} updated!`, 'success');
+      return result.data;
     } else {
-      throw new Error(result.error || 'Write unconfirmed');
+      throw new Error(result.error || 'Server error');
     }
   } catch (e) {
-    console.error('Save Error:', e);
-    setSyncStatus('error', 'Save failed');
-    toast(`Save failed: ${e.message}`, 'error');
+    console.error('Upload Failed:', e);
+    setSyncStatus('error', 'Upload failed');
+    toast("Connection Error - Check Script Deployment", 'error');
     return null;
   }
 }
