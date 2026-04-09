@@ -530,27 +530,40 @@ async function loadFromSheet(){
 
 async function enqueueSave(dept){saveLocal();_saveQueue.push(dept);if(_saving)return;_saving=true;while(_saveQueue.length){await _doSave(_saveQueue.shift());}_saving=false;}
 
-async function _doSave(dept){
-  setSyncStatus('syncing','Saving…');
-  try{
-    const payload={action:'write',dept,data:deptData[dept]};
-    const payloadStr=JSON.stringify(payload);
-    console.log(`[SAVE] ${dept} payload: ${(payloadStr.length/1024).toFixed(1)}KB`);
-    ['frontTiles','tiles'].forEach(k=>{(deptData[dept][k]||[]).forEach((t,i)=>{if(t.type==='image'){const u=t.imageUrl||'';console.log(`  ${k}[${i}].imageUrl = ${u.startsWith('data:')?'base64('+Math.round(u.length/1024)+'KB)':u.substring(0,70)||'(empty)'}`);}});});
+async function _doSave(dept) {
+  setSyncStatus('syncing', 'Saving…');
+  try {
+    const payload = { action: 'write', dept: dept, data: deptData[dept] };
+    const payloadStr = JSON.stringify(payload);
 
-    await fetchWithRetry(SHEET_URL,{method:'POST',mode:'no-cors',body:payloadStr,headers:{'Content-Type':'text/plain;charset=utf-8'}});
+    // 1. Send the data (Notice we removed 'mode: no-cors')
+    const response = await fetch(SHEET_URL, {
+      method: 'POST',
+      body: payloadStr,
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+    });
 
-    await new Promise(r=>setTimeout(r,2000));
-    const v=await fetchWithRetry(`${SHEET_URL}?action=read`);
-    const j=await v.json();
-    if(j.ok&&j.data[dept]){
-      deptData[dept]=j.data[dept];saveLocal();
+    // 2. Wait for the Script to send back the JSON with the Drive links
+    const result = await response.json();
+
+    if (result.ok && result.data) {
+      // 3. Update the website's memory with the real Drive URLs
+      deptData[dept] = result.data; 
+      saveLocal(); // Save to browser cache
+      
+      // 4. Refresh the card on the screen so the image appears instantly
       refreshSlotData(DEPARTMENTS.indexOf(dept));
-      setSyncStatus('ok',`Saved ${ts()}`);toast(`${dept} saved`,'success',2000);
-      console.log('[VERIFY] Back from server:');
-      ['frontTiles','tiles'].forEach(k=>{(j.data[dept][k]||[]).forEach((t,i)=>{if(t.type==='image')console.log(`  ${k}[${i}].imageUrl = ${(t.imageUrl||'(empty)').substring(0,70)}`);});});
-    }else{setSyncStatus('error','Write unconfirmed');toast('Save unconfirmed','error');}
-  }catch(e){console.error('Save Error:',e);setSyncStatus('error','Save failed');toast(`Save failed for ${dept}`,'error');}
+      
+      setSyncStatus('ok', `Saved ${ts()}`);
+      toast(`${dept} updated with images!`, 'success', 2000);
+    } else {
+      throw new Error(result.error || 'Write unconfirmed');
+    }
+  } catch (e) {
+    console.error('Save Error:', e);
+    setSyncStatus('error', 'Save failed');
+    toast(`Save failed: ${e.message}`, 'error');
+  }
 }
 
 function ts(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
