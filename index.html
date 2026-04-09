@@ -536,26 +536,25 @@ async function _doSave(dept) {
     const payload = { action: 'write', dept: dept, data: deptData[dept] };
     const payloadStr = JSON.stringify(payload);
 
-    // 1. Send the data (Notice we removed 'mode: no-cors')
     const response = await fetch(SHEET_URL, {
       method: 'POST',
       body: payloadStr,
       headers: { 'Content-Type': 'text/plain;charset=utf-8' }
     });
 
-    // 2. Wait for the Script to send back the JSON with the Drive links
     const result = await response.json();
 
     if (result.ok && result.data) {
-      // 3. Update the website's memory with the real Drive URLs
+      // THIS IS THE CRITICAL PART: 
+      // Update the main data object with the Drive URLs returned by Google
       deptData[dept] = result.data; 
-      saveLocal(); // Save to browser cache
-      
-      // 4. Refresh the card on the screen so the image appears instantly
+      saveLocal(); 
       refreshSlotData(DEPARTMENTS.indexOf(dept));
       
       setSyncStatus('ok', `Saved ${ts()}`);
       toast(`${dept} updated with images!`, 'success', 2000);
+      
+      return result.data; // Added this return
     } else {
       throw new Error(result.error || 'Write unconfirmed');
     }
@@ -563,6 +562,7 @@ async function _doSave(dept) {
     console.error('Save Error:', e);
     setSyncStatus('error', 'Save failed');
     toast(`Save failed: ${e.message}`, 'error');
+    return null;
   }
 }
 
