@@ -528,8 +528,18 @@ async function loadFromSheet(){
   }catch(e){console.error('loadFromSheet:',e);setSyncStatus('error','Offline — using cache');toast('Using cached data','error',3000);if(!loadLocal())seed();}
 }
 
-async function enqueueSave(dept){saveLocal();_saveQueue.push(dept);if(_saving)return;_saving=true;while(_saveQueue.length){await _doSave(_saveQueue.shift());}_saving=false;}
-
+async function enqueueSave(dept){
+  saveLocal();
+  _saveQueue.push(dept);
+  if(_saving) return;
+  _saving = true;
+  while(_saveQueue.length > 0){
+    const nextDept = _saveQueue.shift();
+    await _doSave(nextDept); // We must await this!
+  }
+  _saving = false;
+}
+  
 async function _doSave(dept) {
   setSyncStatus('syncing', 'Saving…');
   try {
