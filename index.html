@@ -123,8 +123,6 @@ body{
 }
 #fs-scrim.active{display:block;}
 #fs-scrim.visible{opacity:1;}
-
-/* Close button */
 #close-fs-btn{
   display:none;position:fixed;top:20px;right:20px;z-index:220;
   width:44px;height:44px;border-radius:50%;
@@ -135,19 +133,6 @@ body{
 }
 #close-fs-btn:hover{background:rgba(255,255,255,.2);transform:rotate(90deg);}
 #close-fs-btn.visible{display:flex;opacity:1;}
-
-/* Flip button — sits left of close btn */
-#flip-fs-btn{
-  display:none;position:fixed;top:20px;right:74px;z-index:220;
-  height:44px;padding:0 18px;border-radius:22px;
-  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);
-  color:#fff;font-size:.8rem;font-weight:600;cursor:pointer;
-  align-items:center;justify-content:center;gap:7px;
-  transition:all .2s;opacity:0;font-family:'DM Sans',inherit;
-  letter-spacing:.01em;
-}
-#flip-fs-btn:hover{background:rgba(255,255,255,.22);}
-#flip-fs-btn.visible{display:flex;opacity:1;}
 
 /* ── ARROWS ── */
 .nav-arrow{
@@ -206,28 +191,6 @@ body{
   font-size:.7rem;font-family:'DM Mono',monospace;
   color:rgba(255,255,255,.4);white-space:nowrap;
   padding-bottom:4px;
-}
-
-/* ── DISCRETE EXPAND BUTTON ──
-   Transparent ghost in the dark card-head. Barely visible at rest —
-   becomes a solid blue pill on hover. No label, icon only.          */
-.expand-front-btn{
-  width:26px;height:26px;
-  border-radius:7px;
-  background:transparent;
-  border:1px solid rgba(255,255,255,.18);
-  color:rgba(255,255,255,.35);
-  cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  transition:background .2s var(--ease),border-color .2s var(--ease),
-              color .2s var(--ease),transform .18s var(--spring);
-  flex-shrink:0;
-}
-.expand-front-btn:hover{
-  background:var(--blue-ll);
-  border-color:var(--blue);
-  color:var(--blue);
-  transform:scale(1.1);
 }
 
 /* ── FRONT BODY ── */
@@ -430,7 +393,6 @@ body{
 </nav>
 
 <div id="fs-scrim"></div>
-<button id="flip-fs-btn">⟳ Flip</button>
 <button id="close-fs-btn">✕</button>
 
 <div class="stage">
@@ -526,10 +488,22 @@ const IS_MOBILE=window.innerWidth<=1024;
 
 let deptData={},currentIdx=0;
 let isFullscreen=false,_animating=false,_fsCardEl=null,_savedSlotRect=null;
-let _isFrontExpand=false;
 let _saveQueue=[],_saving=false;
 
-let _tileImageStore={};
+/*
+ * ═══════════════════════════════════════════════════════
+ * IMAGE STORE — The core fix for image persistence.
+ *
+ * Image URLs (both base64 for new uploads and Drive URLs
+ * for existing ones) are stored in this plain JS object,
+ * keyed by "side-index" (e.g. "front-0", "back-2").
+ *
+ * This completely bypasses DOM data-attributes, which were
+ * corrupting base64 strings via HTML escaping and getting
+ * wiped during modal DOM rebuilds.
+ * ═══════════════════════════════════════════════════════
+ */
+let _tileImageStore = {};
 
 /* ── TOAST ── */
 function toast(msg,type='info',dur=3000){const c=document.getElementById('toast-container');const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=msg;c.appendChild(t);setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),260);},dur);}
@@ -557,31 +531,53 @@ async function loadFromSheet(){
 async function enqueueSave(dept){
   saveLocal();
   _saveQueue.push(dept);
-  if(_saving)return;
-  _saving=true;
-  while(_saveQueue.length>0){const nextDept=_saveQueue.shift();await _doSave(nextDept);}
-  _saving=false;
+  if(_saving) return;
+  _saving = true;
+  while(_saveQueue.length > 0){
+    const nextDept = _saveQueue.shift();
+    await _doSave(nextDept); // We must await this!
+  }
+  _saving = false;
 }
+  
+async function _doSave(dept) {
+  setSyncStatus('syncing', 'Uploading Media...');
+  try {
+    const payload = { 
+      action: 'write', 
+      dept: dept, 
+      data: deptData[dept] 
+    };
 
-async function _doSave(dept){
-  setSyncStatus('syncing','Uploading Media...');
-  try{
-    const payload={action:'write',dept:dept,data:deptData[dept]};
-    const response=await fetch(SHEET_URL,{method:'POST',mode:'cors',body:JSON.stringify(payload)});
-    const result=await response.json();
-    if(result.ok&&result.data){
-      deptData[dept]=result.data;
-      saveLocal();
-      const idx=DEPARTMENTS.indexOf(dept);
+    const response = await fetch(SHEET_URL, {
+      method: 'POST',
+      mode: 'cors', // Explicitly allow cross-origin
+      body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+
+    if (result.ok && result.data) {
+      // 1. Overwrite our local data with the Drive URLs from Google
+      deptData[dept] = result.data; 
+      
+      // 2. Commit to Browser Storage
+      saveLocal(); 
+      
+      // 3. Force the Card to re-draw immediately
+      const idx = DEPARTMENTS.indexOf(dept);
       refreshSlotData(idx);
-      setSyncStatus('ok',`Synced ${ts()}`);
-      toast(`Success: ${dept} updated!`,'success');
+      
+      setSyncStatus('ok', `Synced ${ts()}`);
+      toast(`Success: ${dept} updated!`, 'success');
       return result.data;
-    }else{throw new Error(result.error||'Server error');}
-  }catch(e){
-    console.error('Upload Failed:',e);
-    setSyncStatus('error','Upload failed');
-    toast("Connection Error - Check Script Deployment",'error');
+    } else {
+      throw new Error(result.error || 'Server error');
+    }
+  } catch (e) {
+    console.error('Upload Failed:', e);
+    setSyncStatus('error', 'Upload failed');
+    toast("Connection Error - Check Script Deployment", 'error');
     return null;
   }
 }
@@ -611,23 +607,7 @@ function buildCoverflow(){
 function makeCardHTML(dept,i){
   return `<div class="flip-card" id="flipcard-${i}">
     <div class="flip-face face-front">
-      <div class="card-head">
-        <div>
-          <div class="dept-eyebrow">${eyebrow}</div>
-          <div class="dept-name">${dept}</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;padding-bottom:2px;">
-          <div class="card-counter-head">${i+1} / ${DEPARTMENTS.length}</div>
-          <button
-            class="expand-front-btn"
-            onclick="event.stopPropagation();expandFrontOnly(${i})"
-            title="Expand front view">
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="currentColor">
-              <path d="M0 0h4v1.5H1.5V4H0V0zm7 0h4v4H9.5V1.5H7V0zM0 7h1.5v2.5H4V11H0V7zm7 2.5h2.5V7H11v4H7V9.5z"/>
-            </svg>
-          </button>
-        </div>
-      </div>
+      <div class="card-head"><div><div class="dept-eyebrow">${eyebrow}</div><div class="dept-name">${dept}</div></div><div class="card-counter-head">${i+1} / ${DEPARTMENTS.length}</div></div>
       <div class="front-body">
         <div class="front-main-split">
           <div class="focus-half"><div class="half-col-head"><div class="half-col-label">Last Week</div></div><div class="items-list" id="lw-items-${i}"></div></div>
@@ -638,13 +618,10 @@ function makeCardHTML(dept,i){
           <div class="front-tile"><div class="tile-hd"><span class="tile-hd-title ft-title-label" data-tile-idx="1"></span></div><div class="tile-bd ft-body-area" data-tile-idx="1"></div></div>
         </div>
       </div>
-      <div class="front-footer">
-        <div class="flip-hint">↵ Click to flip &amp; expand</div>
-        <div class="card-counter">${i+1} / ${DEPARTMENTS.length}</div>
-      </div>
+      <div class="front-footer"><div class="flip-hint">↵ Click to expand</div><div class="card-counter">${i+1} / ${DEPARTMENTS.length}</div></div>
     </div>
     <div class="flip-face face-back">
-      <div class="card-head"><div><div class="dept-eyebrow">Insights &amp; Media</div><div class="dept-name">${dept}</div></div><div class="card-counter-head">${i+1} / ${DEPARTMENTS.length}</div></div>
+      <div class="card-head"><div><div class="dept-eyebrow">Insights & Media</div><div class="dept-name">${dept}</div></div><div class="card-counter-head">${i+1} / ${DEPARTMENTS.length}</div></div>
       <div class="back-tiles" id="back-tiles-${i}"></div>
       <div class="front-footer"><div class="flip-hint">Esc to return</div><div class="card-counter">${i+1} / ${DEPARTMENTS.length}</div></div>
     </div>
@@ -666,107 +643,11 @@ function positionSlots(anim){
 }
 
 /* ── FLIP+FS ── */
-
-// Click-on-card: flip to back then expand
-function startFlipAndExpand(){
-  if(isFullscreen||_animating)return;
-  _animating=true;
-  _isFrontExpand=false;
-  const fc=document.getElementById(`flipcard-${currentIdx}`);
-  _fsCardEl=fc;
-  fc.classList.add('flipped');
-  const s=document.getElementById('fs-scrim');
-  s.classList.add('active');
-  requestAnimationFrame(()=>{requestAnimationFrame(()=>s.classList.add('visible'));});
-  _setChrome(false);
-  setTimeout(()=>_expandToFullscreen(fc),580);
-}
-
-// Expand button: expand front face without flipping
-function expandFrontOnly(idx){
-  if(isFullscreen||_animating)return;
-  _animating=true;
-  _isFrontExpand=true;
-  const fc=document.getElementById(`flipcard-${idx}`);
-  _fsCardEl=fc;
-  const s=document.getElementById('fs-scrim');
-  s.classList.add('active');
-  requestAnimationFrame(()=>{requestAnimationFrame(()=>s.classList.add('visible'));});
-  _setChrome(false);
-  setTimeout(()=>_expandToFullscreen(fc),80);
-}
-
-function _expandToFullscreen(fc){
-  const r=fc.getBoundingClientRect();
-  _savedSlotRect=r;
-  const transform=_isFrontExpand?'rotateY(0deg)':'rotateY(180deg)';
-  fc.style.cssText=`position:fixed;z-index:210;top:${r.top}px;left:${r.left}px;width:${r.width}px;height:${r.height}px;transform:${transform};transition:none;`;
-  document.body.appendChild(fc);
-  fc.offsetHeight;
-  fc.style.transition='top .45s var(--ease),left .45s var(--ease),width .45s var(--ease),height .45s var(--ease)';
-  fc.style.top='0';
-  fc.style.left='0';
-  fc.style.width='100vw';
-  fc.style.height='100vh';
-  fc.querySelectorAll('.flip-face').forEach(f=>f.style.borderRadius='0');
-  setTimeout(()=>{
-    fc.style.transition='';
-    fc.style.transform='';
-    if(_isFrontExpand){
-      fc.classList.remove('flipped');
-    }else{
-      fc.classList.add('flipped');
-    }
-    isFullscreen=true;
-    _animating=false;
-    document.getElementById('close-fs-btn').classList.add('visible');
-    document.getElementById('flip-fs-btn').classList.add('visible');
-  },480);
-}
-
-// Toggle between front and back while already in fullscreen
-function flipInFullscreen(){
-  if(!isFullscreen||_animating)return;
-  _isFrontExpand=!_isFrontExpand;
-  _fsCardEl.classList.toggle('flipped');
-}
-
-function exitFullscreen(){
-  if(!isFullscreen||_animating)return;
-  _animating=true;
-  const fc=_fsCardEl,slot=slots[currentIdx];
-  document.getElementById('close-fs-btn').classList.remove('visible');
-  document.getElementById('flip-fs-btn').classList.remove('visible');
-  fc.style.transform=_isFrontExpand?'rotateY(0deg)':'rotateY(180deg)';
-  fc.classList.remove('flipped');
-  fc.style.transition='top .45s var(--ease),left .45s var(--ease),width .45s var(--ease),height .45s var(--ease)';
-  fc.style.top=_savedSlotRect.top+'px';
-  fc.style.left=_savedSlotRect.left+'px';
-  fc.style.width=_savedSlotRect.width+'px';
-  fc.style.height=_savedSlotRect.height+'px';
-  fc.querySelectorAll('.flip-face').forEach(f=>f.style.borderRadius='');
-  document.getElementById('fs-scrim').classList.remove('visible');
-  setTimeout(()=>{
-    fc.style.cssText='';
-    slot.appendChild(fc);
-    requestAnimationFrame(()=>{
-      fc.classList.remove('flipped');
-      _isFrontExpand=false;
-      setTimeout(()=>{
-        document.getElementById('fs-scrim').classList.remove('active');
-        isFullscreen=false;
-        _animating=false;
-        _fsCardEl=null;
-        _setChrome(true);
-      },570);
-    });
-  },480);
-}
-
+function startFlipAndExpand(){if(isFullscreen||_animating)return;_animating=true;const fc=document.getElementById(`flipcard-${currentIdx}`);_fsCardEl=fc;fc.classList.add('flipped');const s=document.getElementById('fs-scrim');s.classList.add('active');requestAnimationFrame(()=>{requestAnimationFrame(()=>s.classList.add('visible'));});_setChrome(false);setTimeout(()=>_expandToFullscreen(fc),580);}
+function _expandToFullscreen(fc){const r=fc.getBoundingClientRect();_savedSlotRect=r;fc.style.cssText=`position:fixed;z-index:210;top:${r.top}px;left:${r.left}px;width:${r.width}px;height:${r.height}px;transform:rotateY(180deg);transition:none;`;document.body.appendChild(fc);fc.offsetHeight;fc.style.transition='top .45s var(--ease),left .45s var(--ease),width .45s var(--ease),height .45s var(--ease)';fc.style.top='0';fc.style.left='0';fc.style.width='100vw';fc.style.height='100vh';fc.querySelectorAll('.flip-face').forEach(f=>f.style.borderRadius='0');setTimeout(()=>{fc.style.transition='';isFullscreen=true;_animating=false;document.getElementById('close-fs-btn').classList.add('visible');},480);}
+function exitFullscreen(){if(!isFullscreen||_animating)return;_animating=true;const fc=_fsCardEl,slot=slots[currentIdx];document.getElementById('close-fs-btn').classList.remove('visible');fc.style.transition='top .45s var(--ease),left .45s var(--ease),width .45s var(--ease),height .45s var(--ease)';fc.style.top=_savedSlotRect.top+'px';fc.style.left=_savedSlotRect.left+'px';fc.style.width=_savedSlotRect.width+'px';fc.style.height=_savedSlotRect.height+'px';fc.querySelectorAll('.flip-face').forEach(f=>f.style.borderRadius='');document.getElementById('fs-scrim').classList.remove('visible');setTimeout(()=>{fc.style.cssText='';slot.appendChild(fc);requestAnimationFrame(()=>{fc.classList.remove('flipped');setTimeout(()=>{document.getElementById('fs-scrim').classList.remove('active');isFullscreen=false;_animating=false;_fsCardEl=null;_setChrome(true);},570);});},480);}
 document.getElementById('fs-scrim').addEventListener('click',exitFullscreen);
 document.getElementById('close-fs-btn').addEventListener('click',exitFullscreen);
-document.getElementById('flip-fs-btn').addEventListener('click',flipInFullscreen);
-
 function _setChrome(show){const o=show?'1':'0';document.getElementById('dots-nav').style.opacity=o;document.getElementById('album-label').style.opacity=o;document.getElementById('kbd-hints').style.opacity=show?'.5':'0';document.getElementById('timer-widget').style.opacity=show?'1':'.3';document.querySelectorAll('.nav-arrow').forEach(a=>a.style.opacity=o);}
 
 /* ── NAV ── */
@@ -802,7 +683,9 @@ function escHtml(s){const d=document.createElement('div');d.textContent=s;return
 function buildDots(){const nav=document.getElementById('dots-nav');nav.innerHTML='';DEPARTMENTS.forEach((_,i)=>{const d=document.createElement('div');d.className='dept-dot'+(i===currentIdx?' active':'');d.addEventListener('click',()=>navigate(i-currentIdx));nav.appendChild(d);});}
 function updateAlbumLabel(){document.getElementById('al-dept-name').textContent=DEPARTMENTS[currentIdx];const items=(deptData[DEPARTMENTS[currentIdx]]?.twItems||[]).length;document.getElementById('al-dept-sub').textContent=items?`${items} focus items`:'No focus set';}
 
-/* ── EDIT MODAL ── */
+/* ══════════════════════════════════════════════════════
+   EDIT MODAL — Image handling via _tileImageStore
+   ══════════════════════════════════════════════════════ */
 function switchTab(btn){document.querySelectorAll('.modal-tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.modal-tab-panel').forEach(p=>p.classList.remove('active'));btn.classList.add('active');document.getElementById(btn.dataset.tab).classList.add('active');}
 
 function openEditModal(){
@@ -810,9 +693,13 @@ function openEditModal(){
   const d=deptData[dept]||{};
   document.getElementById('modal-title').textContent=`Edit: ${dept}`;
   document.querySelector('.modal-tab').click();
+
+  // Populate image store from current data
   _tileImageStore={};
   (d.frontTiles||[]).forEach((t,i)=>{if(t.type==='image'&&t.imageUrl)_tileImageStore[`front-${i}`]=t.imageUrl;});
   (d.tiles||[]).forEach((t,i)=>{if(t.type==='image'&&t.imageUrl)_tileImageStore[`back-${i}`]=t.imageUrl;});
+  console.log('[MODAL OPEN] Image store populated:',Object.keys(_tileImageStore).map(k=>`${k}=${_tileImageStore[k].substring(0,40)}…`));
+
   const build=(id,items)=>{const w=document.getElementById(id);w.innerHTML='';(items||[]).forEach(it=>addItemRow(id.split('-')[0],it.text,it.color));if(!items||!items.length)addItemRow(id.split('-')[0]);};
   build('lw-editor',d.lwItems);
   build('tw-editor',d.twItems);
@@ -841,6 +728,7 @@ function toggleTFields(side,i,pre){
   const y=document.getElementById(`tf-${side}-y-${i}`).value;
   const f=document.getElementById(`tf-${side}-f-${i}`);f.innerHTML='';
   if(!pre)pre={};
+
   if(y==='notes'){f.innerHTML=`<textarea class="form-textarea" id="tf-${side}-n-${i}" placeholder="Notes content…">${pre.notes||''}</textarea>`;}
   if(y==='metric'){f.innerHTML=`<input type="text" class="form-input" id="tf-${side}-v-${i}" placeholder="e.g. 98%" value="${escAttr(pre.value||'')}">`;}
   if(y==='image'){
@@ -848,11 +736,15 @@ function toggleTFields(side,i,pre){
     const url=_tileImageStore[storeKey]||'';
     const hasImg=!!url;
     const isDrive=url.startsWith('http');
+
     let indicator='';
     if(isDrive)indicator='<div class="img-url-indicator">✓ Saved to Drive</div>';
     else if(hasImg)indicator='<div class="img-url-indicator" style="color:var(--yellow);">⏳ New upload</div>';
+
     f.innerHTML=`<div class="file-upload-wrap"><input type="file" class="file-upload-input" accept="image/*" onchange="handleFileUpload(this,'${side}',${i})"><div class="file-upload-text">${hasImg?'✓ Image set — click to change':'Drop or click to upload'}</div><img class="img-preview-thumb" src="${isDrive?url:''}" style="${isDrive?'display:block':'display:none'}"></div>${indicator}`;
   }
+
+  // If switching away from image, clear from store
   if(y!=='image')delete _tileImageStore[`${side}-${i}`];
 }
 
@@ -862,12 +754,14 @@ async function handleFileUpload(input,side,index){
   const textLabel=wrap.querySelector('.file-upload-text');
   const preview=wrap.querySelector('.img-preview-thumb');
   textLabel.textContent='Compressing…';
+
   const reader=new FileReader();
   reader.onload=async(e)=>{
     try{
       const compressed=await compressImage(e.target.result,800,0.7);
       const storeKey=`${side}-${index}`;
       _tileImageStore[storeKey]=compressed;
+      console.log(`[UPLOAD] ${storeKey} stored: ${(compressed.length/1024).toFixed(0)}KB`);
       preview.src=compressed;preview.style.display='block';
       textLabel.textContent='✓ New image ready';
       const container=wrap.parentElement;
@@ -883,7 +777,9 @@ function compressImage(b64,maxW,q){return new Promise((res,rej)=>{const img=new 
 
 async function saveModal(){
   const btn=document.getElementById('save-btn');btn.textContent='Saving…';btn.disabled=true;
+
   const read=(id)=>{const res=[];document.getElementById(`${id}-editor`).querySelectorAll('.item-editor-row').forEach(r=>{const t=r.querySelector('input').value.trim();if(t)res.push({text:t,color:r.querySelector('select').value});});return res;};
+
   const getTiles=(side,count)=>{
     const res=[];
     for(let i=0;i<count;i++){
@@ -891,13 +787,27 @@ async function saveModal(){
       const title=document.getElementById(`tf-${side}-t-${i}`)?.value||'';
       const notes=document.getElementById(`tf-${side}-n-${i}`)?.value||'';
       const value=document.getElementById(`tf-${side}-v-${i}`)?.value||'';
+      // IMAGE URL FROM JS STORE — not from DOM
       const imageUrl=(type==='image')?(_tileImageStore[`${side}-${i}`]||''):'';
-      res.push({type,title,notes,value,imageUrl});
+      // ALL fields use empty string, NEVER undefined
+      const tile={type:type,title:title,notes:notes,value:value,imageUrl:imageUrl};
+      console.log(`[GET-TILE] ${side}[${i}]: type=${tile.type}, imageUrl=${tile.imageUrl?tile.imageUrl.substring(0,50)+'…':'(empty)'}`);
+      res.push(tile);
     }
     return res;
   };
+
   const dept=DEPARTMENTS[currentIdx];
   const newData={lwItems:read('lw'),twItems:read('tw'),frontTiles:getTiles('front',2),tiles:getTiles('back',4)};
+
+  // SANITY CHECK: verify imageUrl survived into the payload
+  console.log('═══ FINAL PAYLOAD CHECK ═══');
+  ['frontTiles','tiles'].forEach(k=>{newData[k].forEach((t,i)=>{if(t.type==='image')console.log(`  ${k}[${i}].imageUrl present: ${!!t.imageUrl} (${t.imageUrl?t.imageUrl.substring(0,40):''})`);});});
+  // Verify JSON.stringify doesn't lose anything
+  const testStr=JSON.stringify(newData);
+  const testParsed=JSON.parse(testStr);
+  ['frontTiles','tiles'].forEach(k=>{testParsed[k].forEach((t,i)=>{if(t.type==='image')console.log(`  [POST-STRINGIFY] ${k}[${i}].imageUrl present: ${!!t.imageUrl}`);});});
+
   deptData[dept]=newData;
   closeModal();
   refreshSlotData(currentIdx);updateAlbumLabel();
@@ -914,18 +824,7 @@ function timerReset(){if(timerInt){clearInterval(timerInt);timerInt=null;}timerR
 function updateTDisp(){const m=Math.floor(timerRem/60),s=timerRem%60;document.getElementById('timer-display').textContent=`${m}:${s.toString().padStart(2,'0')}`;const w=document.getElementById('timer-widget');w.classList.remove('warn','danger');if(timerRem<=30)w.classList.add('danger');else if(timerRem<=60)w.classList.add('warn');}
 
 /* ── KEYBOARD ── */
-document.addEventListener('keydown',(e)=>{
-  if(e.target.matches('input,textarea,select'))return;
-  if(e.key==='Escape'){
-    if(document.getElementById('modal-overlay').classList.contains('active'))closeModal();
-    else if(isFullscreen)exitFullscreen();
-  }
-  if(e.key==='ArrowRight')navigate(1);
-  if(e.key==='ArrowLeft')navigate(-1);
-  if(e.key==='Enter'&&!isFullscreen)startFlipAndExpand();
-  if(e.key==='f'&&isFullscreen)flipInFullscreen();
-  if(e.key===' '&&!isFullscreen){e.preventDefault();timerToggle();}
-});
+document.addEventListener('keydown',(e)=>{if(e.target.matches('input,textarea,select'))return;if(e.key==='Escape'){if(document.getElementById('modal-overlay').classList.contains('active'))closeModal();else if(isFullscreen)exitFullscreen();}if(e.key==='ArrowRight')navigate(1);if(e.key==='ArrowLeft')navigate(-1);if(e.key==='Enter'&&!isFullscreen)startFlipAndExpand();if(e.key===' '&&!isFullscreen){e.preventDefault();timerToggle();}});
 
 /* ── TILE ZOOM ── */
 let _tileZoomed=false,_tileZoomRect=null;
