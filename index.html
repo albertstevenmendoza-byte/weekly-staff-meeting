@@ -99,9 +99,7 @@ body{
   -webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,.25) 0%,transparent 40%);
   mask-image:linear-gradient(180deg,rgba(0,0,0,.25) 0%,transparent 40%);
 }
-@media (max-width: 1024px) {
-  .card-reflection { display: none !important; }
-}
+@media (max-width:1024px){.card-reflection{display:none !important;}}
 
 /* ── ALBUM LABEL ── */
 #album-label{
@@ -110,29 +108,35 @@ body{
   transition:opacity .25s var(--ease);
 }
 #album-label .al-dept{font-size:1.15rem;font-weight:800;color:var(--ink);letter-spacing:-.01em;}
-#album-label .al-sub{
-  font-size:.7rem;font-family:'DM Mono',monospace;color:var(--ink3);
-  margin-top:3px;letter-spacing:.06em;text-transform:uppercase;
-}
+#album-label .al-sub{font-size:.7rem;font-family:'DM Mono',monospace;color:var(--ink3);margin-top:3px;letter-spacing:.06em;text-transform:uppercase;}
 
-/* ── FULLSCREEN ── */
-#fs-scrim{
-  display:none;position:fixed;inset:0;
-  background:rgba(10,16,30,.92);backdrop-filter:blur(12px);
-  z-index:200;opacity:0;transition:opacity .35s var(--ease);
-}
+/* ── FULLSCREEN OVERLAY ── */
+#fs-scrim{display:none;position:fixed;inset:0;background:rgba(10,16,30,.92);backdrop-filter:blur(12px);z-index:200;opacity:0;transition:opacity .35s var(--ease);}
 #fs-scrim.active{display:block;}
 #fs-scrim.visible{opacity:1;}
+
+/* Close button */
 #close-fs-btn{
   display:none;position:fixed;top:20px;right:20px;z-index:220;
   width:44px;height:44px;border-radius:50%;
   background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);
   color:#fff;font-size:1.3rem;cursor:pointer;
-  align-items:center;justify-content:center;
-  transition:all .2s;opacity:0;
+  align-items:center;justify-content:center;transition:all .2s;opacity:0;
 }
 #close-fs-btn:hover{background:rgba(255,255,255,.2);transform:rotate(90deg);}
 #close-fs-btn.visible{display:flex;opacity:1;}
+
+/* Flip button — left of close */
+#flip-fs-btn{
+  display:none;position:fixed;top:20px;right:74px;z-index:220;
+  height:44px;padding:0 18px;border-radius:22px;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);
+  color:#fff;font-size:.8rem;font-weight:600;cursor:pointer;
+  align-items:center;justify-content:center;gap:7px;
+  transition:all .2s;opacity:0;font-family:'DM Sans',inherit;letter-spacing:.01em;
+}
+#flip-fs-btn:hover{background:rgba(255,255,255,.22);}
+#flip-fs-btn.visible{display:flex;opacity:1;}
 
 /* ── ARROWS ── */
 .nav-arrow{
@@ -140,16 +144,12 @@ body{
   border-radius:50%;background:var(--surface);border:1px solid var(--border);
   color:var(--ink2);font-size:1.4rem;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  transition:all .2s var(--spring);
-  box-shadow:0 4px 14px rgba(0,0,0,.07);
+  transition:all .2s var(--spring);box-shadow:0 4px 14px rgba(0,0,0,.07);
   top:50%;transform:translateY(-50%);
 }
 .nav-arrow.prev{left:clamp(16px,4vw,50px);}
 .nav-arrow.next{right:clamp(16px,4vw,50px);}
-.nav-arrow:hover:not(:disabled){
-  background:var(--blue);border-color:var(--blue);color:#fff;
-  transform:translateY(-50%) scale(1.08);
-}
+.nav-arrow:hover:not(:disabled){background:var(--blue);border-color:var(--blue);color:#fff;transform:translateY(-50%) scale(1.08);}
 .nav-arrow:disabled{opacity:0;cursor:default;pointer-events:none;}
 
 /* ── CARD SLOT ── */
@@ -159,11 +159,7 @@ body{
   transition:transform .5s var(--ease),opacity .45s var(--ease);
   cursor:pointer;will-change:transform,opacity;
 }
-.flip-card{
-  position:relative;width:100%;height:100%;
-  transform-style:preserve-3d;
-  transition:transform .55s var(--ease);
-}
+.flip-card{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .55s var(--ease);}
 .flip-card.flipped{transform:rotateY(180deg);}
 .flip-face{
   position:absolute;inset:0;border-radius:var(--radius);
@@ -181,16 +177,28 @@ body{
   display:flex;align-items:flex-end;justify-content:space-between;
   border-bottom:1px solid rgba(255,255,255,0.08);
 }
-.dept-eyebrow{
-  font-size:.7rem;font-weight:600;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--blue-l);
-  font-family:'DM Mono',monospace;margin-bottom:4px;
-}
+.dept-eyebrow{font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--blue-l);font-family:'DM Mono',monospace;margin-bottom:4px;}
 .dept-name{font-size:2.4rem;font-weight:800;color:#fff;letter-spacing:-.03em;line-height:1;}
-.card-counter-head{
-  font-size:.7rem;font-family:'DM Mono',monospace;
-  color:rgba(255,255,255,.4);white-space:nowrap;
-  padding-bottom:4px;
+.card-counter-head{font-size:.7rem;font-family:'DM Mono',monospace;color:rgba(255,255,255,.4);white-space:nowrap;}
+
+/* ── EXPAND BUTTON ─────────────────────────────────────────────────
+   Ghost at rest (transparent fill, faint border, low-opacity icon).
+   Snaps to the blue pill on hover. Placed below the counter in the
+   card head right column so it never competes with the dept name.
+   ─────────────────────────────────────────────────────────────── */
+.expand-front-btn{
+  width:26px;height:26px;border-radius:7px;
+  background:transparent;
+  border:1px solid rgba(255,255,255,.18);
+  color:rgba(255,255,255,.35);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .2s var(--ease),border-color .2s var(--ease),
+              color .2s var(--ease),transform .18s var(--spring);
+  flex-shrink:0;
+}
+.expand-front-btn:hover{
+  background:var(--blue-ll);border-color:var(--blue);color:var(--blue);
+  transform:scale(1.1);
 }
 
 /* ── FRONT BODY ── */
@@ -198,106 +206,51 @@ body{
 .front-main-split{display:grid;grid-template-columns:1fr 1fr;flex:1;min-height:0;}
 .focus-half{display:flex;flex-direction:column;overflow:hidden;background:var(--surface);}
 .focus-half:first-child{border-right:1px solid var(--border);}
-
-.half-col-head{
-  padding:10px 20px;border-bottom:1px solid var(--border);
-  background:var(--bg2);display:flex;align-items:center;justify-content:center;gap:6px;
-  flex-shrink:0;
-}
-.half-col-label{
-  font-size:.7rem;font-weight:800;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--ink2);
-  font-family:'DM Mono',monospace;text-align:center;
-}
-
-.items-list{
-  flex:1;overflow-y:auto;padding:10px;
-  display:flex;flex-direction:column;gap:6px;
-}
+.half-col-head{padding:10px 20px;border-bottom:1px solid var(--border);background:var(--bg2);display:flex;align-items:center;justify-content:center;gap:6px;flex-shrink:0;}
+.half-col-label{font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);font-family:'DM Mono',monospace;text-align:center;}
+.items-list{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:6px;}
 .items-list::-webkit-scrollbar{width:4px;}
 .items-list::-webkit-scrollbar-track{background:transparent;}
 .items-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
-
-.item-row{
-  padding:9px 12px;border-radius:8px;
-  border-left:3px solid var(--border2);
-  background:var(--bg2);font-size:.85rem;color:var(--ink2);line-height:1.35;
-  animation:itemIn .3s var(--ease) both;
-}
+.item-row{padding:9px 12px;border-radius:8px;border-left:3px solid var(--border2);background:var(--bg2);font-size:.85rem;color:var(--ink2);line-height:1.35;animation:itemIn .3s var(--ease) both;}
 @keyframes itemIn{from{opacity:0;transform:translateX(-6px);}to{opacity:1;transform:none;}}
 .item-row.ic-green{border-left-color:var(--green-l);background:rgba(16,185,129,.06);color:var(--ink);}
 .item-row.ic-yellow{border-left-color:var(--yellow-l);background:rgba(245,158,11,.06);color:var(--ink);}
 .item-row.ic-red{border-left-color:var(--red-l);background:rgba(239,68,68,.06);color:var(--ink);}
 
 /* ── FRONT TILES ROW ── */
-.front-tiles-row{
-  display:grid;grid-template-columns:1fr 1fr;
-  height:42%;border-top:1px solid var(--border);
-  background:var(--border);gap:1px;flex-shrink:0;
-}
+.front-tiles-row{display:grid;grid-template-columns:1fr 1fr;height:42%;border-top:1px solid var(--border);background:var(--border);gap:1px;flex-shrink:0;}
 .front-tile{background:var(--surface);display:flex;flex-direction:column;overflow:hidden;transition:background .15s;}
 .front-tile[style*="cursor"]:hover,.back-tile[style*="cursor"]:hover{background:var(--bg2);}
 
 /* ── FOOTER ── */
-.front-footer{
-  padding:12px 24px;border-top:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;
-  background:var(--bg2);flex-shrink:0;
-}
+.front-footer{padding:12px 24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg2);flex-shrink:0;}
 .flip-hint{font-size:.7rem;color:var(--ink4);font-family:'DM Mono',monospace;}
 .card-counter{font-size:.7rem;color:var(--ink4);font-family:'DM Mono',monospace;}
 
 /* ── TILE SHARED ── */
-.tile-hd{
-  padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--border);
-  display:flex;justify-content:center;align-items:center;flex-shrink:0;
-}
-.tile-hd-title{
-  font-size:.62rem;font-weight:800;text-transform:uppercase;
-  letter-spacing:.08em;color:var(--ink2);text-align:center;
-}
+.tile-hd{padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;justify-content:center;align-items:center;flex-shrink:0;}
+.tile-hd-title{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);text-align:center;}
 .tile-bd{flex:1;overflow:hidden;position:relative;min-height:0;display:flex;flex-direction:column;}
-
-.notes-container {
-  padding:16px;width:100%;height:100%;box-sizing:border-box;
-  overflow-y:auto;white-space:pre-wrap;word-wrap:break-word;line-height:1.5;
-  color:var(--ink);font-weight:500;display:flex;flex-direction:column;
-  background:linear-gradient(to bottom,rgba(255,255,255,0) 0%,rgba(37,99,235,0.03) 100%);
-}
+.notes-container{padding:16px;width:100%;height:100%;box-sizing:border-box;overflow-y:auto;white-space:pre-wrap;word-wrap:break-word;line-height:1.5;color:var(--ink);font-weight:500;display:flex;flex-direction:column;background:linear-gradient(to bottom,rgba(255,255,255,0) 0%,rgba(37,99,235,0.03) 100%);}
 .notes-container::-webkit-scrollbar{width:4px;}
 .notes-container::-webkit-scrollbar-track{background:transparent;}
 .notes-container::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 
 /* ── BACK ── */
-.back-tiles{
-  flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;
-  gap:1px;background:var(--border);overflow:hidden;
-}
+.back-tiles{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;background:var(--border);overflow:hidden;}
 .back-tile{background:var(--surface);display:flex;flex-direction:column;overflow:hidden;}
-
-.metric-container{
-  height:100%;display:flex;align-items:center;justify-content:center;
-  flex-direction:column;padding:10px;
-}
+.metric-container{height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:10px;}
 .metric-value{font-size:3.5rem;font-weight:800;color:var(--blue);letter-spacing:-0.04em;line-height:1;}
 
 /* ── DOTS ── */
-.dots-nav{
-  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
-  display:flex;gap:6px;z-index:50;transition:opacity .25s var(--ease);
-}
+.dots-nav{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:50;transition:opacity .25s var(--ease);}
 .dept-dot{width:7px;height:7px;border-radius:50%;background:var(--border2);cursor:pointer;transition:all .25s var(--ease);}
 .dept-dot:hover{background:var(--ink4);}
 .dept-dot.active{width:22px;border-radius:4px;background:var(--blue);}
 
 /* ── TIMER ── */
-#timer-widget{
-  position:fixed;bottom:20px;right:20px;z-index:300;
-  display:flex;align-items:center;gap:10px;
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:14px;padding:8px 14px;
-  box-shadow:0 8px 20px rgba(0,0,0,0.08);transition:opacity .25s var(--ease);
-}
+#timer-widget{position:fixed;bottom:20px;right:20px;z-index:300;display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:8px 14px;box-shadow:0 8px 20px rgba(0,0,0,0.08);transition:opacity .25s var(--ease);}
 #timer-widget.warn .timer-display{color:var(--yellow);}
 #timer-widget.danger .timer-display{color:var(--red);animation:pulse-text 1s ease-in-out infinite;}
 @keyframes pulse-text{0%,100%{opacity:1;}50%{opacity:.5;}}
@@ -326,42 +279,33 @@ body{
 .modal-body::-webkit-scrollbar{width:5px;}
 .modal-body::-webkit-scrollbar-track{background:transparent;}
 .modal-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
-
 .modal-tabs{display:flex;gap:4px;background:var(--bg2);border-radius:10px;padding:3px;flex-shrink:0;}
 .modal-tab{flex:1;padding:8px 12px;border-radius:8px;font-size:.78rem;font-weight:700;text-align:center;cursor:pointer;color:var(--ink3);border:none;background:transparent;font-family:inherit;transition:all .15s var(--ease);}
 .modal-tab:hover{color:var(--ink2);}
 .modal-tab.active{background:var(--surface);color:var(--blue);box-shadow:0 1px 4px rgba(0,0,0,.06);}
 .modal-tab-panel{display:none;}
 .modal-tab-panel.active{display:block;}
-
 .modal-section-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
 .modal-section-icon{width:28px;height:28px;background:var(--blue-ll);color:var(--blue);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .modal-section-title{font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ink2);}
-
 .item-editor-list{display:flex;flex-direction:column;gap:8px;}
 .item-editor-row{display:flex;gap:8px;align-items:center;background:var(--bg2);padding:8px 10px;border-radius:10px;border:1px solid var(--border);animation:itemIn .2s var(--ease);}
 .item-editor-row .drag-handle{cursor:grab;color:var(--ink4);font-size:.8rem;padding:0 4px;user-select:none;flex-shrink:0;}
-
 .form-input,.form-select,.form-textarea{background:var(--surface);border:1px solid var(--border2);border-radius:7px;color:var(--ink);font-family:inherit;font-size:.85rem;padding:8px 12px;outline:none;transition:border-color .15s;}
 .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--blue-l);}
 .form-textarea{resize:vertical;min-height:60px;}
-
 .add-item-btn{background:var(--blue-ll);color:var(--blue);border:1px dashed var(--blue);padding:10px;border-radius:10px;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .15s;font-family:inherit;}
 .add-item-btn:hover{background:var(--blue);color:#fff;border-style:solid;}
-
 .tile-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 .tile-form-box{background:var(--bg2);border:1px solid var(--border);padding:16px;border-radius:14px;display:flex;flex-direction:column;gap:10px;}
 .tile-form-label{font-size:.65rem;font-weight:800;color:var(--ink4);text-transform:uppercase;letter-spacing:.04em;}
-
 .file-upload-wrap{position:relative;border:2px dashed var(--border2);border-radius:10px;padding:12px;text-align:center;background:var(--surface);transition:border-color .15s;cursor:pointer;}
 .file-upload-wrap:hover{border-color:var(--blue);}
 .file-upload-input{position:absolute;inset:0;opacity:0;cursor:pointer;}
 .file-upload-text{font-size:.72rem;color:var(--ink3);font-weight:600;}
 .img-preview-thumb{margin-top:6px;width:100%;height:50px;object-fit:cover;border-radius:5px;display:none;}
 .img-url-indicator{font-size:.65rem;font-family:'DM Mono',monospace;color:var(--green);padding:4px 8px;background:var(--green-ll);border-radius:5px;margin-top:4px;word-break:break-all;}
-
 .modal-footer{padding:16px 28px;background:var(--bg2);border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0;}
-
 .kbd-hints{position:fixed;bottom:20px;left:20px;z-index:50;display:flex;gap:6px;opacity:.5;transition:opacity .25s var(--ease);}
 .kbd{font-size:.6rem;font-family:'DM Mono',monospace;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:3px 7px;color:var(--ink3);}
 
@@ -393,6 +337,7 @@ body{
 </nav>
 
 <div id="fs-scrim"></div>
+<button id="flip-fs-btn">⟳ Flip</button>
 <button id="close-fs-btn">✕</button>
 
 <div class="stage">
@@ -438,7 +383,7 @@ body{
     </div>
     <div class="modal-body">
       <div class="modal-tab-panel active" id="tab-updates">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
           <div>
             <div class="modal-section-header">
               <div class="modal-section-icon"><svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M11 17l-5-5 1.41-1.41L11 14.17l7.59-7.59L20 8l-9 9z"/></svg></div>
@@ -474,7 +419,7 @@ body{
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Cancel</button>
-      <button class="btn primary" id="save-btn" onclick="saveModal()">Save & Sync</button>
+      <button class="btn primary" id="save-btn" onclick="saveModal()">Save &amp; Sync</button>
     </div>
   </div>
 </div>
@@ -488,27 +433,24 @@ const IS_MOBILE=window.innerWidth<=1024;
 
 let deptData={},currentIdx=0;
 let isFullscreen=false,_animating=false,_fsCardEl=null,_savedSlotRect=null;
-let _saveQueue=[],_saving=false;
 
 /*
- * ═══════════════════════════════════════════════════════
- * IMAGE STORE — The core fix for image persistence.
- *
- * Image URLs (both base64 for new uploads and Drive URLs
- * for existing ones) are stored in this plain JS object,
- * keyed by "side-index" (e.g. "front-0", "back-2").
- *
- * This completely bypasses DOM data-attributes, which were
- * corrupting base64 strings via HTML escaping and getting
- * wiped during modal DOM rebuilds.
- * ═══════════════════════════════════════════════════════
+ * _isFrontExpand tracks which face is visible in fullscreen.
+ *   true  = front face is showing (entered via expand button)
+ *   false = back face is showing  (entered via click-on-card)
+ * flipInFullscreen toggles it and the .flipped class together.
+ * exitFullscreen reads it to set the correct shrink-back transform.
  */
-let _tileImageStore = {};
+let _isFrontExpand=false;
+
+let _saveQueue=[],_saving=false;
+let _pendingFullRefresh=false;
+let _tileImageStore={};
 
 /* ── TOAST ── */
 function toast(msg,type='info',dur=3000){const c=document.getElementById('toast-container');const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=msg;c.appendChild(t);setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),260);},dur);}
 
-/* ── SYNC ── */
+/* ── LOCAL STORAGE ── */
 function stripBase64ForCache(data){const c=JSON.parse(JSON.stringify(data));Object.keys(c).forEach(d=>{['frontTiles','tiles'].forEach(k=>{if(Array.isArray(c[d]?.[k]))c[d][k].forEach(t=>{if(t.imageUrl&&t.imageUrl.startsWith('data:'))t.imageUrl='';});});});return c;}
 function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(stripBase64ForCache(deptData)));}catch(e){console.warn('localStorage full:',e);}}
 function loadLocal(){const r=localStorage.getItem(KEY);if(r){deptData=JSON.parse(r);return true;}return false;}
@@ -518,66 +460,90 @@ function setSyncStatus(s,m){document.getElementById('sync-dot').className='sync-
 
 async function fetchWithRetry(url,opts,retries=3){for(let i=0;i<=retries;i++){try{const r=await fetch(url,opts);if(!r.ok&&i<retries){await new Promise(r=>setTimeout(r,2000*(i+1)));continue;}return r;}catch(e){if(i===retries)throw e;await new Promise(r=>setTimeout(r,2000*(i+1)));}}}
 
+/* ── GAS FETCH HELPER ──────────────────────────────────────────────
+   redirect:'follow'         — GAS deployments issue a 302 redirect
+   Content-Type:'text/plain' — avoids CORS preflight that GAS can't answer
+   res.text()→JSON.parse()   — handles any leading whitespace/BOM
+   ─────────────────────────────────────────────────────────────── */
+async function gasPost(payload){
+  const res=await fetch(SHEET_URL,{
+    method:'POST',
+    redirect:'follow',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify(payload)
+  });
+  const text=await res.text();
+  try{return JSON.parse(text);}
+  catch(e){throw new Error('Non-JSON GAS response: '+text.substring(0,120));}
+}
+
 async function loadFromSheet(){
   setSyncStatus('syncing','Fetching…');
   try{
     const r=await fetchWithRetry(`${SHEET_URL}?action=read`);
     const j=await r.json();
-    if(j.ok){Object.keys(j.data).forEach(k=>deptData[k]=j.data[k]);saveLocal();setSyncStatus('ok',`Synced ${ts()}`);buildCoverflow();refreshAllSlots();positionSlots(false);buildDots();updateAlbumLabel();toast('Data synced','success',2000);}
-    else throw new Error('Bad response');
-  }catch(e){console.error('loadFromSheet:',e);setSyncStatus('error','Offline — using cache');toast('Using cached data','error',3000);if(!loadLocal())seed();}
+    if(j.ok){
+      Object.keys(j.data).forEach(k=>deptData[k]=j.data[k]);
+      saveLocal();
+      setSyncStatus('ok',`Synced ${ts()}`);
+      if(!isFullscreen){
+        buildCoverflow();refreshAllSlots();positionSlots(false);buildDots();updateAlbumLabel();
+      }else{
+        _pendingFullRefresh=true;
+      }
+      toast('Data synced','success',2000);
+    }else throw new Error('Bad response');
+  }catch(e){
+    console.error('loadFromSheet:',e);
+    setSyncStatus('error','Offline — using cache');
+    toast('Using cached data','error',3000);
+    if(!loadLocal())seed();
+  }
 }
 
 async function enqueueSave(dept){
-  saveLocal();
-  _saveQueue.push(dept);
-  if(_saving) return;
-  _saving = true;
-  while(_saveQueue.length > 0){
-    const nextDept = _saveQueue.shift();
-    await _doSave(nextDept); // We must await this!
-  }
-  _saving = false;
+  saveLocal();_saveQueue.push(dept);
+  if(_saving)return;
+  _saving=true;
+  while(_saveQueue.length>0){const d=_saveQueue.shift();await _doSave(d);}
+  _saving=false;
 }
-  
-async function _doSave(dept) {
-  setSyncStatus('syncing', 'Uploading Media...');
-  try {
-    const payload = { 
-      action: 'write', 
-      dept: dept, 
-      data: deptData[dept] 
-    };
 
-    const response = await fetch(SHEET_URL, {
-      method: 'POST',
-      mode: 'cors', // Explicitly allow cross-origin
-      body: JSON.stringify(payload)
-    });
-
-    const result = await response.json();
-
-    if (result.ok && result.data) {
-      // 1. Overwrite our local data with the Drive URLs from Google
-      deptData[dept] = result.data; 
-      
-      // 2. Commit to Browser Storage
-      saveLocal(); 
-      
-      // 3. Force the Card to re-draw immediately
-      const idx = DEPARTMENTS.indexOf(dept);
-      refreshSlotData(idx);
-      
-      setSyncStatus('ok', `Synced ${ts()}`);
-      toast(`Success: ${dept} updated!`, 'success');
-      return result.data;
-    } else {
-      throw new Error(result.error || 'Server error');
+/* ── _doSave: TWO-STEP SAVE ────────────────────────────────────────
+   ScriptProperties has a 9 KB per-property limit. A compressed base64
+   image is 50–150 KB, so embedding it in 'write' blows the limit.
+   Step 1: upload each new base64 image via 'uploadImage' → Drive URL.
+   Step 2: write text-only data (Drive URLs, no base64) → safe size.
+   ─────────────────────────────────────────────────────────────── */
+async function _doSave(dept){
+  setSyncStatus('syncing','Saving…');
+  try{
+    const cleaned=JSON.parse(JSON.stringify(deptData[dept]));
+    const groups=[cleaned.frontTiles||[],cleaned.tiles||[]];
+    let n=0;
+    for(const group of groups){
+      for(const tile of group){
+        if(tile.type==='image'&&tile.imageUrl&&tile.imageUrl.startsWith('data:')){
+          n++;setSyncStatus('syncing',`Uploading image ${n}…`);
+          const r=await gasPost({action:'uploadImage',base64:tile.imageUrl});
+          if(r.ok&&r.url){tile.imageUrl=r.url;}
+          else throw new Error('Image upload failed: '+(r.error||'unknown'));
+        }
+      }
     }
-  } catch (e) {
-    console.error('Upload Failed:', e);
-    setSyncStatus('error', 'Upload failed');
-    toast("Connection Error - Check Script Deployment", 'error');
+    setSyncStatus('syncing','Writing data…');
+    const r=await gasPost({action:'write',dept:dept,data:cleaned});
+    if(!r.ok)throw new Error(r.error||'write returned not-ok');
+    deptData[dept]=cleaned;
+    saveLocal();
+    if(!isFullscreen){refreshSlotData(DEPARTMENTS.indexOf(dept));}
+    setSyncStatus('ok',`Synced ${ts()}`);
+    toast(`${dept} saved`,'success');
+    return cleaned;
+  }catch(e){
+    console.error('_doSave failed:',e);
+    setSyncStatus('error','Save failed');
+    toast('Save failed: '+e.message,'error');
     return null;
   }
 }
@@ -592,6 +558,8 @@ async function init(){eyebrow=new Date().toLocaleDateString('en-US',{weekday:'lo
 /* ── COVERFLOW ── */
 const slots=[];
 function buildCoverflow(){
+  /* Ghost-card guard: defer DOM rebuild while a card is in fullscreen */
+  if(isFullscreen){_pendingFullRefresh=true;return;}
   const track=document.getElementById('coverflow');
   track.querySelectorAll('.card-slot,.card-reflection').forEach(el=>el.remove());
   slots.length=0;
@@ -599,15 +567,46 @@ function buildCoverflow(){
     if(!IS_MOBILE){const ref=document.createElement('div');ref.className='card-reflection';ref.id=`ref-${i}`;ref.innerHTML=`<div class="card-reflection-inner" id="ref-inner-${i}"></div>`;track.appendChild(ref);}
     const slot=document.createElement('div');slot.className='card-slot';slot.dataset.idx=i;
     slot.innerHTML=makeCardHTML(dept,i);
-    slot.addEventListener('click',(e)=>{if(e.target.closest('button,input,select'))return;if(_animating)return;const idx=parseInt(slot.dataset.idx);if(idx===currentIdx&&!isFullscreen)startFlipAndExpand();else if(idx!==currentIdx)navigate(idx-currentIdx);});
+    slot.addEventListener('click',(e)=>{
+      if(e.target.closest('button,input,select'))return;
+      if(_animating)return;
+      const idx=parseInt(slot.dataset.idx);
+      if(idx===currentIdx&&!isFullscreen)startFlipAndExpand();
+      else if(idx!==currentIdx)navigate(idx-currentIdx);
+    });
     track.appendChild(slot);slots.push(slot);
   });
 }
 
+/* ── CARD HTML ─────────────────────────────────────────────────────
+   The expand button is a discrete icon in the card head right column.
+   onclick → expandFrontOnly(i): expands the card to fullscreen
+             showing the FRONT face. The flip-fs-btn (top of screen)
+             then lets the user flip to the back face from there.
+
+   Clicking the card body directly → startFlipAndExpand(): expands
+   to fullscreen showing the BACK face, same as before.
+   ─────────────────────────────────────────────────────────────── */
 function makeCardHTML(dept,i){
   return `<div class="flip-card" id="flipcard-${i}">
     <div class="flip-face face-front">
-      <div class="card-head"><div><div class="dept-eyebrow">${eyebrow}</div><div class="dept-name">${dept}</div></div><div class="card-counter-head">${i+1} / ${DEPARTMENTS.length}</div></div>
+      <div class="card-head">
+        <div>
+          <div class="dept-eyebrow">${eyebrow}</div>
+          <div class="dept-name">${dept}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;padding-bottom:2px;">
+          <div class="card-counter-head">${i+1} / ${DEPARTMENTS.length}</div>
+          <button
+            class="expand-front-btn"
+            onclick="event.stopPropagation();expandFrontOnly(${i})"
+            title="Expand front view">
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="currentColor">
+              <path d="M0 0h4v1.5H1.5V4H0V0zm7 0h4v4H9.5V1.5H7V0zM0 7h1.5v2.5H4V11H0V7zm7 2.5h2.5V7H11v4H7V9.5z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
       <div class="front-body">
         <div class="front-main-split">
           <div class="focus-half"><div class="half-col-head"><div class="half-col-label">Last Week</div></div><div class="items-list" id="lw-items-${i}"></div></div>
@@ -618,10 +617,13 @@ function makeCardHTML(dept,i){
           <div class="front-tile"><div class="tile-hd"><span class="tile-hd-title ft-title-label" data-tile-idx="1"></span></div><div class="tile-bd ft-body-area" data-tile-idx="1"></div></div>
         </div>
       </div>
-      <div class="front-footer"><div class="flip-hint">↵ Click to expand</div><div class="card-counter">${i+1} / ${DEPARTMENTS.length}</div></div>
+      <div class="front-footer">
+        <div class="flip-hint">↵ Click to flip &amp; expand</div>
+        <div class="card-counter">${i+1} / ${DEPARTMENTS.length}</div>
+      </div>
     </div>
     <div class="flip-face face-back">
-      <div class="card-head"><div><div class="dept-eyebrow">Insights & Media</div><div class="dept-name">${dept}</div></div><div class="card-counter-head">${i+1} / ${DEPARTMENTS.length}</div></div>
+      <div class="card-head"><div><div class="dept-eyebrow">Insights &amp; Media</div><div class="dept-name">${dept}</div></div><div class="card-counter-head">${i+1} / ${DEPARTMENTS.length}</div></div>
       <div class="back-tiles" id="back-tiles-${i}"></div>
       <div class="front-footer"><div class="flip-hint">Esc to return</div><div class="card-counter">${i+1} / ${DEPARTMENTS.length}</div></div>
     </div>
@@ -642,12 +644,114 @@ function positionSlots(anim){
   });
 }
 
-/* ── FLIP+FS ── */
-function startFlipAndExpand(){if(isFullscreen||_animating)return;_animating=true;const fc=document.getElementById(`flipcard-${currentIdx}`);_fsCardEl=fc;fc.classList.add('flipped');const s=document.getElementById('fs-scrim');s.classList.add('active');requestAnimationFrame(()=>{requestAnimationFrame(()=>s.classList.add('visible'));});_setChrome(false);setTimeout(()=>_expandToFullscreen(fc),580);}
-function _expandToFullscreen(fc){const r=fc.getBoundingClientRect();_savedSlotRect=r;fc.style.cssText=`position:fixed;z-index:210;top:${r.top}px;left:${r.left}px;width:${r.width}px;height:${r.height}px;transform:rotateY(180deg);transition:none;`;document.body.appendChild(fc);fc.offsetHeight;fc.style.transition='top .45s var(--ease),left .45s var(--ease),width .45s var(--ease),height .45s var(--ease)';fc.style.top='0';fc.style.left='0';fc.style.width='100vw';fc.style.height='100vh';fc.querySelectorAll('.flip-face').forEach(f=>f.style.borderRadius='0');setTimeout(()=>{fc.style.transition='';isFullscreen=true;_animating=false;document.getElementById('close-fs-btn').classList.add('visible');},480);}
-function exitFullscreen(){if(!isFullscreen||_animating)return;_animating=true;const fc=_fsCardEl,slot=slots[currentIdx];document.getElementById('close-fs-btn').classList.remove('visible');fc.style.transition='top .45s var(--ease),left .45s var(--ease),width .45s var(--ease),height .45s var(--ease)';fc.style.top=_savedSlotRect.top+'px';fc.style.left=_savedSlotRect.left+'px';fc.style.width=_savedSlotRect.width+'px';fc.style.height=_savedSlotRect.height+'px';fc.querySelectorAll('.flip-face').forEach(f=>f.style.borderRadius='');document.getElementById('fs-scrim').classList.remove('visible');setTimeout(()=>{fc.style.cssText='';slot.appendChild(fc);requestAnimationFrame(()=>{fc.classList.remove('flipped');setTimeout(()=>{document.getElementById('fs-scrim').classList.remove('active');isFullscreen=false;_animating=false;_fsCardEl=null;_setChrome(true);},570);});},480);}
+/* ── THREE ENTRY PATHS INTO FULLSCREEN ─────────────────────────────
+ *
+ *  startFlipAndExpand()   — card body click / Enter key
+ *    Shows the BACK face. Card flips first, then expands.
+ *    _isFrontExpand = false
+ *
+ *  expandFrontOnly(idx)   — discrete expand button in card head
+ *    Shows the FRONT face without flipping. Expands immediately.
+ *    _isFrontExpand = true
+ *
+ *  Both paths converge on _expandToFullscreen(fc) which uses
+ *  _isFrontExpand to set the initial CSS transform so the correct
+ *  face is visible the moment the card hits fullscreen.
+ *
+ *  flipInFullscreen()     — ⟳ Flip overlay button / 'f' key
+ *    Toggles between front and back while already fullscreen.
+ *
+ * ─────────────────────────────────────────────────────────────── */
+function startFlipAndExpand(){
+  if(isFullscreen||_animating)return;
+  _animating=true;_isFrontExpand=false;
+  const fc=document.getElementById(`flipcard-${currentIdx}`);
+  _fsCardEl=fc;fc.classList.add('flipped');
+  const s=document.getElementById('fs-scrim');
+  s.classList.add('active');
+  requestAnimationFrame(()=>{requestAnimationFrame(()=>s.classList.add('visible'));});
+  _setChrome(false);
+  setTimeout(()=>_expandToFullscreen(fc),580);
+}
+
+function expandFrontOnly(idx){
+  if(isFullscreen||_animating)return;
+  _animating=true;_isFrontExpand=true;
+  const fc=document.getElementById(`flipcard-${idx}`);
+  _fsCardEl=fc;
+  const s=document.getElementById('fs-scrim');
+  s.classList.add('active');
+  requestAnimationFrame(()=>{requestAnimationFrame(()=>s.classList.add('visible'));});
+  _setChrome(false);
+  /* No flip delay needed — front face is already showing */
+  setTimeout(()=>_expandToFullscreen(fc),80);
+}
+
+function _expandToFullscreen(fc){
+  const r=fc.getBoundingClientRect();_savedSlotRect=r;
+  /* Start at the face that should be visible */
+  const transform=_isFrontExpand?'rotateY(0deg)':'rotateY(180deg)';
+  fc.style.cssText=`position:fixed;z-index:210;top:${r.top}px;left:${r.left}px;width:${r.width}px;height:${r.height}px;transform:${transform};transition:none;`;
+  document.body.appendChild(fc);
+  fc.offsetHeight; /* force reflow */
+  fc.style.transition='top .45s var(--ease),left .45s var(--ease),width .45s var(--ease),height .45s var(--ease)';
+  fc.style.top='0';fc.style.left='0';fc.style.width='100vw';fc.style.height='100vh';
+  fc.querySelectorAll('.flip-face').forEach(f=>f.style.borderRadius='0');
+  setTimeout(()=>{
+    /* Hand transform control back to the .flipped class */
+    fc.style.transition='';fc.style.transform='';
+    if(_isFrontExpand){fc.classList.remove('flipped');}else{fc.classList.add('flipped');}
+    isFullscreen=true;_animating=false;
+    document.getElementById('close-fs-btn').classList.add('visible');
+    document.getElementById('flip-fs-btn').classList.add('visible');
+  },480);
+}
+
+function flipInFullscreen(){
+  if(!isFullscreen||_animating)return;
+  _isFrontExpand=!_isFrontExpand;
+  _fsCardEl.classList.toggle('flipped');
+}
+
+function exitFullscreen(){
+  if(!isFullscreen||_animating)return;
+  _animating=true;
+  const fc=_fsCardEl,slot=slots[currentIdx];
+  document.getElementById('close-fs-btn').classList.remove('visible');
+  document.getElementById('flip-fs-btn').classList.remove('visible');
+  /* Match the shrink-back transform to whichever face is showing */
+  fc.style.transform=_isFrontExpand?'rotateY(0deg)':'rotateY(180deg)';
+  fc.classList.remove('flipped');
+  fc.style.transition='top .45s var(--ease),left .45s var(--ease),width .45s var(--ease),height .45s var(--ease)';
+  fc.style.top=_savedSlotRect.top+'px';fc.style.left=_savedSlotRect.left+'px';
+  fc.style.width=_savedSlotRect.width+'px';fc.style.height=_savedSlotRect.height+'px';
+  fc.querySelectorAll('.flip-face').forEach(f=>f.style.borderRadius='');
+  document.getElementById('fs-scrim').classList.remove('visible');
+  setTimeout(()=>{
+    fc.style.cssText='';
+    /* Evict any stale card a deferred buildCoverflow may have placed here */
+    slot.querySelectorAll('.flip-card').forEach(el=>el.remove());
+    slot.appendChild(fc);
+    requestAnimationFrame(()=>{
+      fc.classList.remove('flipped');_isFrontExpand=false;
+      setTimeout(()=>{
+        document.getElementById('fs-scrim').classList.remove('active');
+        isFullscreen=false;_animating=false;_fsCardEl=null;_setChrome(true);
+        if(_pendingFullRefresh){
+          _pendingFullRefresh=false;
+          buildCoverflow();refreshAllSlots();positionSlots(false);buildDots();updateAlbumLabel();
+        }else{
+          refreshSlotData(currentIdx);
+        }
+      },570);
+    });
+  },480);
+}
+
 document.getElementById('fs-scrim').addEventListener('click',exitFullscreen);
 document.getElementById('close-fs-btn').addEventListener('click',exitFullscreen);
+document.getElementById('flip-fs-btn').addEventListener('click',flipInFullscreen);
+
 function _setChrome(show){const o=show?'1':'0';document.getElementById('dots-nav').style.opacity=o;document.getElementById('album-label').style.opacity=o;document.getElementById('kbd-hints').style.opacity=show?'.5':'0';document.getElementById('timer-widget').style.opacity=show?'1':'.3';document.querySelectorAll('.nav-arrow').forEach(a=>a.style.opacity=o);}
 
 /* ── NAV ── */
@@ -656,9 +760,23 @@ function updateNavArrows(){document.getElementById('btn-prev').disabled=(current
 
 /* ── RENDER ── */
 function refreshAllSlots(){DEPARTMENTS.forEach((_,i)=>refreshSlotData(i));}
-function refreshSlotData(i){const d=deptData[DEPARTMENTS[i]]||{};const slot=slots[i];if(!slot)return;renderItemsEl(slot.querySelector(`#lw-items-${i}`),d.lwItems);renderItemsEl(slot.querySelector(`#tw-items-${i}`),d.twItems);renderTilesForSlot(i,'ft',d.frontTiles||[]);renderTilesForSlot(i,'bt',d.tiles||[]);if(!IS_MOBILE&&Math.abs(i-currentIdx)<=2)requestAnimationFrame(()=>syncReflection(i));}
+function refreshSlotData(i){
+  const d=deptData[DEPARTMENTS[i]]||{};const slot=slots[i];if(!slot)return;
+  renderItemsEl(slot.querySelector(`#lw-items-${i}`),d.lwItems);
+  renderItemsEl(slot.querySelector(`#tw-items-${i}`),d.twItems);
+  renderTilesForSlot(i,'ft',d.frontTiles||[]);
+  renderTilesForSlot(i,'bt',d.tiles||[]);
+  if(!IS_MOBILE&&Math.abs(i-currentIdx)<=2)requestAnimationFrame(()=>syncReflection(i));
+}
 function renderItemsEl(el,items){if(!el)return;el.innerHTML='';if(!items||!items.length){el.innerHTML='<div style="padding:10px;color:var(--ink4);font-size:.78rem;font-style:italic;">No updates</div>';return;}items.forEach((it,idx)=>{const r=document.createElement('div');r.className=`item-row ic-${it.color||'none'}`;r.textContent=it.text;r.style.animationDelay=`${idx*40}ms`;el.appendChild(r);});}
-function syncReflection(i){const inner=document.getElementById(`ref-inner-${i}`);const front=document.querySelector(`#flipcard-${i} .face-front`);if(inner&&front){inner.innerHTML='';inner.appendChild(front.cloneNode(true));}}
+
+function syncReflection(i){
+  const inner=document.getElementById(`ref-inner-${i}`);
+  const slot=slots[i];if(!inner||!slot)return;
+  const fc=slot.querySelector('.flip-card');if(!fc)return;
+  const front=fc.querySelector('.face-front');if(!front)return;
+  inner.innerHTML='';inner.appendChild(front.cloneNode(true));
+}
 
 function renderTilesForSlot(si,prefix,tiles){
   const slot=slots[si];if(!slot)return;const count=(prefix==='ft')?2:4;
@@ -670,7 +788,6 @@ function renderTilesForSlot(si,prefix,tiles){
     if(t.type&&t.type!=='none'&&tileParent){tileParent.style.cursor='pointer';tileParent.onclick=(e)=>{e.stopPropagation();openTileZoom(tileParent);};}
   }
 }
-
 function renderTileContent(bd,t){
   if(t.type==='notes'){const text=t.notes||'';let fs='1.05rem';if(text.length<50)fs='1.6rem';else if(text.length<120)fs='1.25rem';bd.innerHTML=`<div class="notes-container" style="font-size:${fs};justify-content:${text.length<80?'center':'flex-start'};">${escHtml(text)}</div>`;}
   else if(t.type==='image'){bd.innerHTML=`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;"><img src="${t.imageUrl||''}" style="max-width:100%;max-height:100%;object-fit:contain;" onerror="this.parentElement.innerHTML='<span style=\\'color:var(--ink4);font-size:.7rem;\\'>Image failed</span>'"></div>`;}
@@ -683,28 +800,19 @@ function escHtml(s){const d=document.createElement('div');d.textContent=s;return
 function buildDots(){const nav=document.getElementById('dots-nav');nav.innerHTML='';DEPARTMENTS.forEach((_,i)=>{const d=document.createElement('div');d.className='dept-dot'+(i===currentIdx?' active':'');d.addEventListener('click',()=>navigate(i-currentIdx));nav.appendChild(d);});}
 function updateAlbumLabel(){document.getElementById('al-dept-name').textContent=DEPARTMENTS[currentIdx];const items=(deptData[DEPARTMENTS[currentIdx]]?.twItems||[]).length;document.getElementById('al-dept-sub').textContent=items?`${items} focus items`:'No focus set';}
 
-/* ══════════════════════════════════════════════════════
-   EDIT MODAL — Image handling via _tileImageStore
-   ══════════════════════════════════════════════════════ */
+/* ── EDIT MODAL ── */
 function switchTab(btn){document.querySelectorAll('.modal-tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.modal-tab-panel').forEach(p=>p.classList.remove('active'));btn.classList.add('active');document.getElementById(btn.dataset.tab).classList.add('active');}
 
 function openEditModal(){
-  const dept=DEPARTMENTS[currentIdx];
-  const d=deptData[dept]||{};
+  const dept=DEPARTMENTS[currentIdx];const d=deptData[dept]||{};
   document.getElementById('modal-title').textContent=`Edit: ${dept}`;
   document.querySelector('.modal-tab').click();
-
-  // Populate image store from current data
   _tileImageStore={};
   (d.frontTiles||[]).forEach((t,i)=>{if(t.type==='image'&&t.imageUrl)_tileImageStore[`front-${i}`]=t.imageUrl;});
   (d.tiles||[]).forEach((t,i)=>{if(t.type==='image'&&t.imageUrl)_tileImageStore[`back-${i}`]=t.imageUrl;});
-  console.log('[MODAL OPEN] Image store populated:',Object.keys(_tileImageStore).map(k=>`${k}=${_tileImageStore[k].substring(0,40)}…`));
-
   const build=(id,items)=>{const w=document.getElementById(id);w.innerHTML='';(items||[]).forEach(it=>addItemRow(id.split('-')[0],it.text,it.color));if(!items||!items.length)addItemRow(id.split('-')[0]);};
-  build('lw-editor',d.lwItems);
-  build('tw-editor',d.twItems);
-  buildTileForms('front',d.frontTiles||[]);
-  buildTileForms('back',d.tiles||[]);
+  build('lw-editor',d.lwItems);build('tw-editor',d.twItems);
+  buildTileForms('front',d.frontTiles||[]);buildTileForms('back',d.tiles||[]);
   document.getElementById('modal-overlay').classList.add('active');
 }
 
@@ -726,25 +834,17 @@ function buildTileForms(side,tiles){
 
 function toggleTFields(side,i,pre){
   const y=document.getElementById(`tf-${side}-y-${i}`).value;
-  const f=document.getElementById(`tf-${side}-f-${i}`);f.innerHTML='';
-  if(!pre)pre={};
-
+  const f=document.getElementById(`tf-${side}-f-${i}`);f.innerHTML='';if(!pre)pre={};
   if(y==='notes'){f.innerHTML=`<textarea class="form-textarea" id="tf-${side}-n-${i}" placeholder="Notes content…">${pre.notes||''}</textarea>`;}
   if(y==='metric'){f.innerHTML=`<input type="text" class="form-input" id="tf-${side}-v-${i}" placeholder="e.g. 98%" value="${escAttr(pre.value||'')}">`;}
   if(y==='image'){
-    const storeKey=`${side}-${i}`;
-    const url=_tileImageStore[storeKey]||'';
-    const hasImg=!!url;
-    const isDrive=url.startsWith('http');
-
+    const storeKey=`${side}-${i}`;const url=_tileImageStore[storeKey]||'';
+    const hasImg=!!url;const isDrive=url.startsWith('http');
     let indicator='';
     if(isDrive)indicator='<div class="img-url-indicator">✓ Saved to Drive</div>';
     else if(hasImg)indicator='<div class="img-url-indicator" style="color:var(--yellow);">⏳ New upload</div>';
-
     f.innerHTML=`<div class="file-upload-wrap"><input type="file" class="file-upload-input" accept="image/*" onchange="handleFileUpload(this,'${side}',${i})"><div class="file-upload-text">${hasImg?'✓ Image set — click to change':'Drop or click to upload'}</div><img class="img-preview-thumb" src="${isDrive?url:''}" style="${isDrive?'display:block':'display:none'}"></div>${indicator}`;
   }
-
-  // If switching away from image, clear from store
   if(y!=='image')delete _tileImageStore[`${side}-${i}`];
 }
 
@@ -754,20 +854,17 @@ async function handleFileUpload(input,side,index){
   const textLabel=wrap.querySelector('.file-upload-text');
   const preview=wrap.querySelector('.img-preview-thumb');
   textLabel.textContent='Compressing…';
-
   const reader=new FileReader();
   reader.onload=async(e)=>{
     try{
       const compressed=await compressImage(e.target.result,800,0.7);
-      const storeKey=`${side}-${index}`;
-      _tileImageStore[storeKey]=compressed;
-      console.log(`[UPLOAD] ${storeKey} stored: ${(compressed.length/1024).toFixed(0)}KB`);
+      const storeKey=`${side}-${index}`;_tileImageStore[storeKey]=compressed;
       preview.src=compressed;preview.style.display='block';
       textLabel.textContent='✓ New image ready';
       const container=wrap.parentElement;
       let ind=container.querySelector('.img-url-indicator');
       if(!ind){ind=document.createElement('div');ind.className='img-url-indicator';container.appendChild(ind);}
-      ind.style.color='var(--yellow)';ind.textContent='⏳ New upload (will save to Drive)';
+      ind.style.color='var(--yellow)';ind.textContent='⏳ New upload (will save to Drive on sync)';
     }catch(err){textLabel.textContent='Error — try again';console.error('Compress:',err);}
   };
   reader.readAsDataURL(file);
@@ -777,9 +874,7 @@ function compressImage(b64,maxW,q){return new Promise((res,rej)=>{const img=new 
 
 async function saveModal(){
   const btn=document.getElementById('save-btn');btn.textContent='Saving…';btn.disabled=true;
-
   const read=(id)=>{const res=[];document.getElementById(`${id}-editor`).querySelectorAll('.item-editor-row').forEach(r=>{const t=r.querySelector('input').value.trim();if(t)res.push({text:t,color:r.querySelector('select').value});});return res;};
-
   const getTiles=(side,count)=>{
     const res=[];
     for(let i=0;i<count;i++){
@@ -787,32 +882,16 @@ async function saveModal(){
       const title=document.getElementById(`tf-${side}-t-${i}`)?.value||'';
       const notes=document.getElementById(`tf-${side}-n-${i}`)?.value||'';
       const value=document.getElementById(`tf-${side}-v-${i}`)?.value||'';
-      // IMAGE URL FROM JS STORE — not from DOM
       const imageUrl=(type==='image')?(_tileImageStore[`${side}-${i}`]||''):'';
-      // ALL fields use empty string, NEVER undefined
-      const tile={type:type,title:title,notes:notes,value:value,imageUrl:imageUrl};
-      console.log(`[GET-TILE] ${side}[${i}]: type=${tile.type}, imageUrl=${tile.imageUrl?tile.imageUrl.substring(0,50)+'…':'(empty)'}`);
-      res.push(tile);
+      res.push({type,title,notes,value,imageUrl});
     }
     return res;
   };
-
   const dept=DEPARTMENTS[currentIdx];
   const newData={lwItems:read('lw'),twItems:read('tw'),frontTiles:getTiles('front',2),tiles:getTiles('back',4)};
-
-  // SANITY CHECK: verify imageUrl survived into the payload
-  console.log('═══ FINAL PAYLOAD CHECK ═══');
-  ['frontTiles','tiles'].forEach(k=>{newData[k].forEach((t,i)=>{if(t.type==='image')console.log(`  ${k}[${i}].imageUrl present: ${!!t.imageUrl} (${t.imageUrl?t.imageUrl.substring(0,40):''})`);});});
-  // Verify JSON.stringify doesn't lose anything
-  const testStr=JSON.stringify(newData);
-  const testParsed=JSON.parse(testStr);
-  ['frontTiles','tiles'].forEach(k=>{testParsed[k].forEach((t,i)=>{if(t.type==='image')console.log(`  [POST-STRINGIFY] ${k}[${i}].imageUrl present: ${!!t.imageUrl}`);});});
-
-  deptData[dept]=newData;
-  closeModal();
-  refreshSlotData(currentIdx);updateAlbumLabel();
+  deptData[dept]=newData;closeModal();refreshSlotData(currentIdx);updateAlbumLabel();
   await enqueueSave(dept);
-  btn.textContent='Save & Sync';btn.disabled=false;
+  btn.textContent='Save &amp; Sync';btn.disabled=false;
 }
 
 function closeModal(){document.getElementById('modal-overlay').classList.remove('active');}
@@ -824,7 +903,15 @@ function timerReset(){if(timerInt){clearInterval(timerInt);timerInt=null;}timerR
 function updateTDisp(){const m=Math.floor(timerRem/60),s=timerRem%60;document.getElementById('timer-display').textContent=`${m}:${s.toString().padStart(2,'0')}`;const w=document.getElementById('timer-widget');w.classList.remove('warn','danger');if(timerRem<=30)w.classList.add('danger');else if(timerRem<=60)w.classList.add('warn');}
 
 /* ── KEYBOARD ── */
-document.addEventListener('keydown',(e)=>{if(e.target.matches('input,textarea,select'))return;if(e.key==='Escape'){if(document.getElementById('modal-overlay').classList.contains('active'))closeModal();else if(isFullscreen)exitFullscreen();}if(e.key==='ArrowRight')navigate(1);if(e.key==='ArrowLeft')navigate(-1);if(e.key==='Enter'&&!isFullscreen)startFlipAndExpand();if(e.key===' '&&!isFullscreen){e.preventDefault();timerToggle();}});
+document.addEventListener('keydown',(e)=>{
+  if(e.target.matches('input,textarea,select'))return;
+  if(e.key==='Escape'){if(document.getElementById('modal-overlay').classList.contains('active'))closeModal();else if(isFullscreen)exitFullscreen();}
+  if(e.key==='ArrowRight')navigate(1);
+  if(e.key==='ArrowLeft')navigate(-1);
+  if(e.key==='Enter'&&!isFullscreen)startFlipAndExpand();
+  if(e.key==='f'&&isFullscreen)flipInFullscreen();
+  if(e.key===' '&&!isFullscreen){e.preventDefault();timerToggle();}
+});
 
 /* ── TILE ZOOM ── */
 let _tileZoomed=false,_tileZoomRect=null;
